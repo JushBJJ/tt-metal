@@ -435,6 +435,15 @@ std::vector<Tensor> _bias_gelu_bw(
     return grad_tensor;
 }
 
+std::vector<Tensor> _binary_fmod_bw(
+    const Tensor& grad, const Tensor& input, const Tensor& other, const MemoryConfig& output_mem_config) {
+    std::vector<Tensor> grad_tensor;
+    grad_tensor.emplace_back(grad);
+    Tensor result_div = div(input, other, true, "trunc");
+    Tensor grad_b = ttnn::multiply(ttnn::neg(grad), result_div, std::nullopt, output_mem_config);
+    grad_tensor.emplace_back(grad_b);
+    return grad_tensor;
+ }
 
 std::vector<Tensor> _binary_gt_bw(const Tensor& grad, const Tensor& input, const Tensor& other, const MemoryConfig& output_mem_config) {
     return _binary_comp_bw(grad, input, other, output_mem_config);
@@ -667,6 +676,8 @@ std::function<std::vector<ttnn::Tensor>(const Tensor&, const Tensor&, const Tens
             return _min_or_max_bw<true>;
         case BinaryBackwardOpType::MUL_BW:
             return _mul_bw_inter;
+        case BinaryBackwardOpType::BINARY_FMOD_BW:
+            return _binary_fmod_bw;
         default:
             TT_ASSERT(false && "Undefined op type");
             return 0;

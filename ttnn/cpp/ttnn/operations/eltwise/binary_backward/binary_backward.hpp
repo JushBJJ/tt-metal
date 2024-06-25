@@ -160,6 +160,7 @@ constexpr auto min_bw = ttnn::register_operation<operations::binary_backward::Ex
 constexpr auto max_bw = ttnn::register_operation<operations::binary_backward::ExecuteBinaryBackward<operations::binary_backward::BinaryBackwardOpType::MAX_BW>>("ttnn::max_bw");
 constexpr auto div_bw = ttnn::register_operation<operations::binary_backward::ExecuteBinaryBackward<operations::binary_backward::BinaryBackwardOpType::DIV_BW>>("ttnn::div_bw");
 constexpr auto lerp_bw = ttnn::register_operation<operations::binary_backward::ExecuteBinaryBackward<operations::binary_backward::BinaryBackwardOpType::LERP_BW>>("ttnn::lerp_bw");
+constexpr auto binary_fmod_bw = ttnn::register_operation<operations::binary_backward::ExecuteBinaryBackward<operations::binary_backward::BinaryBackwardOpType::BINARY_FMOD_BW>>("ttnn::binary_fmod_bw");
 
 //type 2
 constexpr auto addalpha_bw = ttnn::register_operation<operations::binary_backward::ExecuteBinaryBackward<operations::binary_backward::BinaryBackwardOpType::ADDALPHA_BW>>("ttnn::addalpha_bw");
