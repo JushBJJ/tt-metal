@@ -41,6 +41,7 @@ enum class BinaryBackwardOpType {
     DIV_BW,
     LERP_BW,
     MUL_BW,
+    BINARY_REMAINDER_BW,
 };
 struct BinaryBackwardFunction{
 static std::function<std::vector<ttnn::Tensor>(const Tensor&, const Tensor&, const Tensor&, const MemoryConfig&)> get_function_type1(BinaryBackwardOpType OpType);
