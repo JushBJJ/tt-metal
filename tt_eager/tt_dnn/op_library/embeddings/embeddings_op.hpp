@@ -58,5 +58,43 @@ inline Tensor embeddings(
     return output_tensors.at(0);
 }
 
+struct EmbeddingsBw {
+    MemoryConfig output_mem_config;
+    DataType output_dtype;
+    uint32_t num_embeddings;
+
+    void validate(const std::vector<Tensor> &input_tensors) const;
+    std::vector<Shape> compute_output_shapes(const std::vector<Tensor> &input_tensors) const;
+    std::vector<Tensor> create_output_tensors(const std::vector<Tensor> &input_tensors) const;
+    operation::ProgramWithCallbacks create_program(
+        const std::vector<Tensor> &input_tensors, std::vector<Tensor> &output_tensors) const;
+    tt::stl::reflection::Attributes attributes() const;
+};
+
+inline Tensor embeddings_bw(
+    const Tensor &input_tensor,
+    const Tensor &weights,
+    const Tensor &grad_tensor,
+    const MemoryConfig &mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
+    std::optional<const DataType> output_dtype = std::nullopt) {
+    std::vector<Tensor> output_tensors = {Tensor(operation::get_workers_for_op_output({grad_tensor, input_tensor}))};
+    auto num_embeddings = weights.get_legacy_shape()[-2];
+
+    operation::launch_op(
+        [num_embeddings, mem_config, output_dtype] (const std::vector<Tensor>& input_tensors, const std::vector<std::optional<const Tensor>>& optional_input_tensors, const std::vector<std::optional<Tensor>>& optional_output_tensors) mutable -> std::vector<Tensor> {
+            auto& grad_tensor = input_tensors.at(0);
+            auto& index_tensor = input_tensors.at(1);
+
+            return operation::run_without_autoformat(
+               EmbeddingsBw{
+                   .output_mem_config = mem_config,
+                   .output_dtype = output_dtype.value_or(grad_tensor.get_dtype()),
+                   .num_embeddings = num_embeddings},
+               {grad_tensor, index_tensor});
+        }, {grad_tensor, input_tensor}, output_tensors);
+
+    return output_tensors.at(0);
+}
+
 }  // namespace tt_metal
 }  // namespace tt

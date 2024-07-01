@@ -199,12 +199,6 @@ void py_module(py::module& module) {
 
     detail::bind_binary_backward(
         module,
-        ttnn::embedding_bw,
-        R"doc(Performs backward operations for embedding_bw function and it returns specific indices of the embedding table specified by the :attr:`grad_tensor`.
-        The input tensor( :attr:`input_tensor_a`, :attr:`input_tensor_b`) should be unique.)doc");
-
-    detail::bind_binary_backward(
-        module,
         ttnn::subalpha_bw,
         R"doc(Performs backward operations for subalpha of :attr:`input_tensor_a` and :attr:`input_tensor_b` tensors with given :attr:`grad_tensor`.)doc");
 

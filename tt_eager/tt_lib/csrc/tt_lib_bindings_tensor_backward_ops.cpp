@@ -5,6 +5,7 @@
 #include "tt_lib_bindings_tensor.hpp"
 #include "tt_lib_bindings_tensor_impl.hpp"
 #include "tt_dnn/op_library/backward/backward_ops.hpp"
+#include "tt_dnn/op_library/embeddings/embeddings_op.hpp"
 
 namespace tt::tt_metal::detail{
     void TensorModuleBackwardOPs( py::module & m_tensor){
@@ -1973,6 +1974,27 @@ namespace tt::tt_metal::detail{
                 "alpha", "Alpha value", "float", "default to 1.0f", "No"
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
+
+    m_tensor.def(
+        "embeddings_bw",
+        &embeddings_bw,
+        py::arg("input").noconvert(),
+        py::arg("weights").noconvert(),
+        py::arg("output_gradient").noconvert(),
+        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
+        py::arg("output_dtype").noconvert() = std::nullopt,
+        R"doc(
+        Returns specific indices of the embedding table specified by the input tensor
+
+        .. csv-table::
+            :header: "Argument", "Description", "Data type", "Valid range", "Required"
+
+            "input", "Tensor containing rows we want", "UInt32 Tensor", "Each element greater than 0 and less than number of embeddings in table.  Shape [batch_size, 1, 1, num_rows]", "Yes"
+            "weights", "Entire embedding table", "Tensor", "Tensor shape is [1,1, num_embeddings, num_columns]. Num_columns must be divisible by 32.", "Yes"
+            "output_gradient", "Loss function gradient with respect to embedding output", "Tensor", "Tensor shape is [batch_size, 1, num_rows, num_columns]", "Yes"
+            "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
+            "output_dtype", "DataType of output tensor", "DataType", "Default is weights dtype", "No"
+    )doc");
 
     }
 }
