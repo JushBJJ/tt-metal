@@ -105,7 +105,7 @@ def test_swish(device, h, w):
 def run_activation_softplus_test(device, h, w, beta, threshold, ttnn_function, torch_function, pcc=0.999):
     torch.manual_seed(0)
 
-    torch_input_tensor_a = torch.rand((h, w), dtype=torch.bfloat16)
+    torch_input_tensor_a = torch.Tensor(h, w).to(dtype=torch.bfloat16).uniform_(-100, 100)
 
     torch_output_tensor = torch_function(torch_input_tensor_a, beta=beta, threshold=threshold)
 
@@ -117,8 +117,6 @@ def run_activation_softplus_test(device, h, w, beta, threshold, ttnn_function, t
     output_tensor = ttnn.to_layout(output_tensor, ttnn.ROW_MAJOR_LAYOUT)
     output_tensor = ttnn.from_device(output_tensor)
     output_tensor = ttnn.to_torch(output_tensor)
-    print(torch_output_tensor)
-    print(output_tensor)
     assert_with_pcc(torch_output_tensor, output_tensor, pcc)
 
 
