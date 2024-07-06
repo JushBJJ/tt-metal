@@ -35,6 +35,9 @@
 // 36 bits of address followed by coordinate. First 32 bits of address go into lo register, remaining address bits and coordinates are in the mid register
 #define NOC_COORD_REG_OFFSET 4; // offset (from LSB) in register holding x-y coordinate
 
+// Pass-through for WH and GS, special cased for BH
+#define NOC_LOCAL_ADDR(addr) NOC_LOCAL_ADDR_OFFSET(addr)
+
 // Alignment restrictions
 #define NOC_L1_READ_ALIGNMENT_BYTES       16
 #define NOC_L1_WRITE_ALIGNMENT_BYTES      16
