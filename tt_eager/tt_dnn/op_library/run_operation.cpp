@@ -164,6 +164,8 @@ OutputTensors run_device_operation(
                                     const OptionalConstTensors& optional_input_tensors,
                                     OutputTensors& output_tensors,
                                     const OptionalTensors& optional_output_tensors) -> std::reference_wrapper<Program> {
+
+            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_start`");
             program_hash = operation.compute_program_hash(input_tensors, optional_input_tensors);
             auto cache_hit = program_cache.contains(program_hash);
 
@@ -171,17 +173,25 @@ OutputTensors run_device_operation(
 
             if (not cache_hit or operation.uses_custom_program_hash()) {
                 operation.validate(input_tensors, optional_input_tensors, optional_output_tensors);
+                op_profiler::tracy_message("`TT_SIGNPOST: validate_on_program_cache_miss`");
             }
 
             if (not cache_hit) {
+                op_profiler::tracy_message("`TT_SIGNPOST: create_program_start`");
                 program_cache.insert(
                     program_hash, operation.create_program(input_tensors, optional_input_tensors, output_tensors));
+                op_profiler::tracy_message("`TT_SIGNPOST: create_program_end`");
             }
+
             auto& program_with_callbacks = program_cache.get<operation::CacheableProgram<OutputTensors>>(program_hash);
+            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_end`");
+
             TT_ASSERT(program_with_callbacks.supports_program_cache());
 
             if (cache_hit) {
                 ZoneScopedN("Cache_hit_set_runtime_args");
+                op_profiler::tracy_message("`TT_SIGNPOST: override_runtime_arguments_start`");
+
                 if (program_with_callbacks.override_addresses_callback.has_value()) {
                     auto override_addresses_callback = program_with_callbacks.override_addresses_callback.value();
                     // Deprecated
@@ -203,6 +213,8 @@ OutputTensors run_device_operation(
                         optional_input_tensors,
                         output_tensors);
                 }
+
+                op_profiler::tracy_message("`TT_SIGNPOST: override_runtime_arguments_end`");
             }
             return program_with_callbacks.program;
         };
@@ -212,14 +224,21 @@ OutputTensors run_device_operation(
                                    const OptionalConstTensors& optional_input_tensors,
                                    OutputTensors& output_tensors,
                                    const OptionalTensors& optional_output_tensors) -> std::shared_ptr<Program> {
+
+            op_profiler::tracy_message("`TT_SIGNPOST: create_program_start`");
             operation.validate(input_tensors, optional_input_tensors, optional_output_tensors);
             auto program_with_callbacks =
                 operation.create_program(input_tensors, optional_input_tensors, output_tensors);
+
+            op_profiler::tracy_message("`TT_SIGNPOST: create_program_end`");
             return std::make_shared<Program>(std::move(program_with_callbacks.program));
         };
     }
 
+    op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_start`");
     auto output_tensors = operation.create_output_tensors(input_tensors, optional_output_tensors);
+    op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_end`");
+
     auto program = get_or_create_program(
         operation, input_tensors, optional_input_tensors, output_tensors, optional_output_tensors);
     uint32_t device_id = detail::get_device(input_tensors, optional_input_tensors)->id();
@@ -230,8 +249,12 @@ OutputTensors run_device_operation(
             auto device = detail::get_device(input_tensors, optional_input_tensors);
             using T = std::decay_t<decltype(program)>;
             if constexpr (
-                std::is_same_v<T, std::reference_wrapper<Program>> || std::is_same_v<T, std::shared_ptr<Program>>) {
-                if (USE_FAST_DISPATCH) {
+                std::is_same_v<T, std::reference_wrapper<Program>> || std::is_same_v<T, std::shared_ptr<Program>>)
+            {
+                if (USE_FAST_DISPATCH)
+                {
+                    op_profiler::tracy_message("`TT_SIGNPOST: enque_program_start`");
+
                     // Program will temporarily own the input buffers. This is required, since with Async command
                     // queues, the input tensor can preemptively be deallocted on device, unless program maintains
                     // explicit ownership. This invocation of the program will give up ownership once its enqueued.
@@ -240,6 +263,7 @@ OutputTensors run_device_operation(
                             AssignGlobalBufferToProgram(input_tensor.device_buffer(), program);
                         }
                     }
+
                     for (auto& optional_input_tensor : optional_input_tensors) {
                         if (optional_input_tensor.has_value() and
                             optional_input_tensor.value().storage_type() == StorageType::DEVICE) {
@@ -247,8 +271,12 @@ OutputTensors run_device_operation(
                         }
                     }
                     EnqueueProgram(queue, program, false);
+
+                    op_profiler::tracy_message("`TT_SIGNPOST: enque_program_end`");
                 } else {
+                    op_profiler::tracy_message("`TT_SIGNPOST: lunch_program_start`");
                     ::detail::LaunchProgram(device, program);
+                    op_profiler::tracy_message("`TT_SIGNPOST: lunch_program_end`");
                 }
             }
         },
@@ -297,18 +325,25 @@ OutputTensors run(
     const Tensors& input_tensors,
     const OptionalConstTensors& optional_input_tensors,
     const OptionalTensors& optional_output_tensors,
-    uint8_t cq_id) {
+    uint8_t cq_id)
+{
+    op_profiler::tracy_message("`TT_SIGNPOST: run_device_operation_start`");
+
     auto device = detail::get_device(input_tensors, optional_input_tensors);
 #ifdef DEBUG
     operation.validate(input_tensors, optional_input_tensors, optional_output_tensors);
     detail::validate_op_launch(device);
 #endif
-    return detail::decorate_device_operation(detail::run_device_operation<OutputTensors>)(
+    auto outputTensors = detail::decorate_device_operation(detail::run_device_operation<OutputTensors>)(
         std::ref(device->command_queue(cq_id)),
         operation,
         input_tensors,
         optional_input_tensors,
         optional_output_tensors);
+
+    op_profiler::tracy_message("`TT_SIGNPOST: run_device_operation_end`");
+
+    return outputTensors;
 }
 
 template Tensors run(

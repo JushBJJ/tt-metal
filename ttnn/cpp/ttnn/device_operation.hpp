@@ -121,6 +121,7 @@ inline auto& create_or_get_program_from_cache(
     typename device_operation_t::tensor_return_value_t& tensor_return_value) {
     if (not program_cache_hit) {
         ZoneScopedN("Program Cache Miss");
+        op_profiler::tracy_message("`TT_SIGNPOST: create_program_start`");
         auto program_factory = device_operation_t::select_program_factory(operation_attributes, tensor_args);
 
         auto& program = std::visit(
@@ -143,6 +144,7 @@ inline auto& create_or_get_program_from_cache(
                 return cached_program.program;
             },
             program_factory);
+        op_profiler::tracy_message("`TT_SIGNPOST: create_program_end`");
         return program;
     } else {
         ZoneScopedN("Program Cache Hit");
@@ -161,9 +163,12 @@ inline auto& create_or_get_program_from_cache(
                 using cached_program_t =
                     decltype(program_factory_t::create(operation_attributes, tensor_args, tensor_return_value));
                 auto& cached_program = cached_program_factory.cached_program.template get<cached_program_t>();
+                op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_end`");
 
+                op_profiler::tracy_message("`TT_SIGNPOST: override_runtime_arguments_start`");
                 program_factory_t::override_runtime_arguments(
                     cached_program, operation_attributes, tensor_args, tensor_return_value);
+                op_profiler::tracy_message("`TT_SIGNPOST: override_runtime_arguments_end`");
 
                 return cached_program.program;
             },
@@ -269,8 +274,11 @@ typename device_operation_t::tensor_return_value_t run(
 
     // TODO: support the case when tensor args are empty? Or add an overload for that case?
     auto device = tt::stl::reflection::get_first_object_of_type<Tensor>(tensor_args).get().device();
-    auto& program_cache = device->program_cache;
 
+    op_profiler::tracy_message("`TT_SIGNPOST: ttnn`"
+    op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_start`");
+
+    auto& program_cache = device->program_cache;
     auto program_hash = compute_program_hash<device_operation_t>(operation_attributes, tensor_args);
     auto program_cache_hit = program_cache.contains(program_hash);
 
@@ -279,15 +287,19 @@ typename device_operation_t::tensor_return_value_t run(
     if (program_cache_hit) {
         ZoneScopedN("Validate on Program Cache Hit");
         device_operation_t::validate_on_program_cache_hit(operation_attributes, tensor_args);
+        o§p_profiler::tracy_message("`TT_SIGNPOST: validate_on_program_cache_hit`");
     } else {
         ZoneScopedN("Validate on Program Cache Miss");
         device_operation_t::validate_on_program_cache_miss(operation_attributes, tensor_args);
+        op_profiler::tracy_message("`TT_SIGNPOST: validate_on_program_cache_miss`");
     }
+
     auto tensor_return_value = [&operation_attributes, &tensor_args]() {
         ZoneScopedN("Create Output Tensors");
+        op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_start`");
         return device_operation_t::create_output_tensors(operation_attributes, tensor_args);
+        op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_end`");
     }();
-
     tt::stl::reflection::visit_object_of_type<Tensor>(check_tensor_types, tensor_return_value);
 
     auto& program = create_or_get_program_from_cache<device_operation_t>(
@@ -295,6 +307,7 @@ typename device_operation_t::tensor_return_value_t run(
 
     if (USE_FAST_DISPATCH) {
         ZoneScopedN("EnqueueProgram");
+        op_profiler::tracy_message("`TT_SIGNPOST: enque_program_start`");
         auto& queue = device->command_queue(cq_id);
         // Program will temporarily own the input buffers. This is required, since with Async command
         // queues, the input tensor can preemptively be deallocted on device, unless program maintains
@@ -304,9 +317,12 @@ typename device_operation_t::tensor_return_value_t run(
         };
         tt::stl::reflection::visit_object_of_type<Tensor>(assign_global_buffer_to_program, tensor_args);
         tt::tt_metal::EnqueueProgram(queue, program, false);
+        op_profiler::tracy_message("`TT_SIGNPOST: enque_program_end`");
     } else {
         ZoneScopedN("LaunchProgram");
+        op_profiler::tracy_message("`TT_SIGNPOST: lunch_program_start`");
         ::detail::LaunchProgram(device, program);
+        op_profiler::tracy_message("`TT_SIGNPOST: lunch_program_end`");
     }
 
     // TODO: update this to work properly take program cache info, as well as tensors
