@@ -160,10 +160,11 @@ inline auto& create_or_get_program_from_cache(
                 auto&& program_factory) -> auto& {
                 using program_factory_t = std::decay_t<decltype(program_factory)>;
 
+                op_profiler::tracy_message("`TT_SIGNPOST: lookup_program_cache_start`");
                 using cached_program_t =
                     decltype(program_factory_t::create(operation_attributes, tensor_args, tensor_return_value));
                 auto& cached_program = cached_program_factory.cached_program.template get<cached_program_t>();
-                op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_end`");
+                op_profiler::tracy_message("`TT_SIGNPOST: lookup_program_cache_end`");
 
                 op_profiler::tracy_message("`TT_SIGNPOST: override_runtime_arguments_start`");
                 program_factory_t::override_runtime_arguments(
@@ -265,8 +266,9 @@ typename device_operation_t::tensor_return_value_t run(
     const typename device_operation_t::operation_attributes_t& operation_attributes,
     const typename device_operation_t::tensor_args_t& tensor_args) {
     ZoneScopedN("TT_DNN_DEVICE_OP");
-    auto operation_id = assign_operation_id();
+    op_profiler::tracy_message("`TT_SIGNPOST: run_device_operation_start`");
 
+    auto operation_id = assign_operation_id();
     tt::stl::reflection::visit_object_of_type<Tensor>(check_tensor_types, tensor_args);
 
     using tensor_return_value_t = typename device_operation_t::tensor_return_value_t;
@@ -275,19 +277,23 @@ typename device_operation_t::tensor_return_value_t run(
     // TODO: support the case when tensor args are empty? Or add an overload for that case?
     auto device = tt::stl::reflection::get_first_object_of_type<Tensor>(tensor_args).get().device();
 
-    op_profiler::tracy_message("`TT_SIGNPOST: ttnn`"
-    op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_start`");
+    op_profiler::tracy_message("`TT_SIGNPOST: ttnn`");
 
+    op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_start`");
     auto& program_cache = device->program_cache;
     auto program_hash = compute_program_hash<device_operation_t>(operation_attributes, tensor_args);
+    op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_end`");
+
+    op_profiler::tracy_message("`TT_SIGNPOST: check_program_cache_hit_start`");
     auto program_cache_hit = program_cache.contains(program_hash);
+    op_profiler::tracy_message("`TT_SIGNPOST: check_program_cache_hit_end`");
 
     log_operation<device_operation_t>(operation_attributes, tensor_args, program_hash, program_cache_hit);
 
     if (program_cache_hit) {
         ZoneScopedN("Validate on Program Cache Hit");
         device_operation_t::validate_on_program_cache_hit(operation_attributes, tensor_args);
-        o§p_profiler::tracy_message("`TT_SIGNPOST: validate_on_program_cache_hit`");
+        op_profiler::tracy_message("`TT_SIGNPOST: validate_on_program_cache_hit`");
     } else {
         ZoneScopedN("Validate on Program Cache Miss");
         device_operation_t::validate_on_program_cache_miss(operation_attributes, tensor_args);
@@ -297,8 +303,9 @@ typename device_operation_t::tensor_return_value_t run(
     auto tensor_return_value = [&operation_attributes, &tensor_args]() {
         ZoneScopedN("Create Output Tensors");
         op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_start`");
-        return device_operation_t::create_output_tensors(operation_attributes, tensor_args);
+        auto output_tensors = device_operation_t::create_output_tensors(operation_attributes, tensor_args);
         op_profiler::tracy_message("`TT_SIGNPOST: create_output_tensors_end`");
+        return std::move(output_tensors);
     }();
     tt::stl::reflection::visit_object_of_type<Tensor>(check_tensor_types, tensor_return_value);
 
@@ -336,6 +343,7 @@ typename device_operation_t::tensor_return_value_t run(
         tensor_args,
         tensor_return_value);
 
+    op_profiler::tracy_message("`TT_SIGNPOST: run_device_operation_end`");
     return tensor_return_value;
 }
 

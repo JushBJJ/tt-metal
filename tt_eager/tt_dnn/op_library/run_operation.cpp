@@ -165,9 +165,13 @@ OutputTensors run_device_operation(
                                     OutputTensors& output_tensors,
                                     const OptionalTensors& optional_output_tensors) -> std::reference_wrapper<Program> {
 
-            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_start`");
+            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_start`");
             program_hash = operation.compute_program_hash(input_tensors, optional_input_tensors);
+            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_end`");
+
+            op_profiler::tracy_message("`TT_SIGNPOST: check_program_cache_hit_start`");
             auto cache_hit = program_cache.contains(program_hash);
+            op_profiler::tracy_message("`TT_SIGNPOST: check_program_cache_hit_end`");
 
             log_debug(tt::LogOp, "Program Hash: {} ({})", program_hash, cache_hit ? "HIT" : "MISS");
 
@@ -183,8 +187,9 @@ OutputTensors run_device_operation(
                 op_profiler::tracy_message("`TT_SIGNPOST: create_program_end`");
             }
 
+            op_profiler::tracy_message("`TT_SIGNPOST: lookup_program_cache_start`");
             auto& program_with_callbacks = program_cache.get<operation::CacheableProgram<OutputTensors>>(program_hash);
-            op_profiler::tracy_message("`TT_SIGNPOST: compute_hash_and_lookup_program_cache_end`");
+            op_profiler::tracy_message("`TT_SIGNPOST: lookup_program_cache_end`");
 
             TT_ASSERT(program_with_callbacks.supports_program_cache());
 

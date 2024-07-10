@@ -9,6 +9,7 @@
 #include "ttnn/device_operation.hpp"
 #include "ttnn/operations/data_movement.hpp"
 #include "ttnn/operations/eltwise/unary/unary.hpp"
+#include "tt_metal/tools/profiler/op_profiler.hpp"
 
 namespace ttnn {
 
@@ -99,6 +100,8 @@ struct Binary {
         std::optional<Tensor> optional_output_tensor = std::nullopt,
         std::optional<FusedActivations> activations = std::nullopt) {
 
+        op_profiler::tracy_message("`TT_SIGNPOST: execute_on_worker_thread_start`");
+
         if(output_dtype.has_value() && optional_output_tensor.has_value()){
             TT_FATAL(output_dtype.value() == optional_output_tensor.value().get_dtype(), "If both output dtype and output tensor provided dtype should match");
         }
@@ -141,6 +144,8 @@ struct Binary {
         if(optional_output_tensor.has_value()) {
             dtype = optional_output_tensor.value().get_dtype();
         }
+
+        op_profiler::tracy_message("`TT_SIGNPOST: execute_on_worker_thread_end`");
 
         return ttnn::device_operation::run<BinaryDeviceOperation>(
             queue_id,
