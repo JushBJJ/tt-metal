@@ -9,6 +9,7 @@
 #include "ttnn/experimental/tt_dnn/op_library/run_operation.hpp"
 
 #include "tt_metal/third_party/tracy/public/tracy/Tracy.hpp"
+#include "tt_metal/tools/profiler/op_profiler.hpp"
 
 namespace ttnn {
 namespace decorators {
@@ -190,6 +191,9 @@ struct operation_t {
 
     template <typename... args_t>
     auto operator()(args_t&&... args) const {
+
+        op_profiler::tracy_message("`TT_SIGNPOST: operator_brace_start`");
+
         ZoneScopedN("Run ttnn operation (struct-based)");
         ZoneName(this->cpp_fully_qualified_name, std::strlen(this->cpp_fully_qualified_name));
         tt::log_debug(tt::LogOp, "Started   C++ ttnn operation: {}", this->cpp_fully_qualified_name);
@@ -240,6 +244,7 @@ struct operation_t {
                 enable_autoformat);
 
             tt::log_debug(tt::LogOp, "Finished  C++ ttnn operation: {}", this->cpp_fully_qualified_name);
+            op_profiler::tracy_message("`TT_SIGNPOST: operator_brace_end`");
 
             if constexpr (std::is_same_v<std::decay_t<execute_on_worker_thread_return_t>, Tensor>) {
                 return output_tensors.at(0);

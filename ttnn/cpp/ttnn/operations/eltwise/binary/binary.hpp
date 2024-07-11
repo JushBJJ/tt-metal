@@ -147,11 +147,15 @@ struct Binary {
 
         op_profiler::tracy_message("`TT_SIGNPOST: execute_on_worker_thread_end`");
 
-        return ttnn::device_operation::run<BinaryDeviceOperation>(
+        auto returned_tensors = ttnn::device_operation::run<BinaryDeviceOperation>(
             queue_id,
             BinaryDeviceOperation::operation_attributes_t{
                 binary_op_type, in_place, activations, output_memory_config, dtype, std::nullopt},
             BinaryDeviceOperation::tensor_args_t{input_tensor_a, input_tensor_b, optional_output_tensor});
+
+        op_profiler::tracy_message("`TT_SIGNPOST: run_binary_device_operation_end`");
+
+        return std::move(returned_tensors);
     }
 
     static Tensor execute_on_worker_thread(
