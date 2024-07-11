@@ -162,7 +162,7 @@ uint32_t read_from_pcie(volatile tt_l1_ptr prefetch_q_entry_type *& prefetch_q_r
     }
 
     uint64_t host_src_addr = pcie_noc_xy | pcie_read_ptr;
-    DPRINT << "read_from_pcie: " << fence + preamble_size << " " << pcie_read_ptr << ENDL();
+    // DPRINT << "read_from_pcie: " << fence + preamble_size << " " << pcie_read_ptr << ENDL();
     noc_async_read(host_src_addr, fence + preamble_size, size);
     pending_read_size = size + preamble_size;
     pcie_read_ptr += size;
@@ -213,7 +213,7 @@ void fetch_q_get_cmds(uint32_t& fence, uint32_t& cmd_ptr, uint32_t& pcie_read_pt
          return;
     }
 
-    DPRINT << "fetch_q_get_cmds: " << cmd_ptr << " " << fence << ENDL();
+    // DPRINT << "fetch_q_get_cmds: " << cmd_ptr << " " << fence << ENDL();
     if (fence < cmd_ptr) {
         cmd_ptr = fence;
     }
@@ -432,7 +432,7 @@ uint32_t process_relay_paged_cmd_large(uint32_t cmd_ptr,
                                        uint32_t length_adjust) {
 
 #if ENABLE_PREFETCH_DPRINTS
-    DPRINT << "relay_paged_cmd_large: " << page_size << " " << pages << " " << length_adjust << ENDL();
+    // DPRINT << "relay_paged_cmd_large: " << page_size << " " << pages << " " << length_adjust << ENDL();
 #endif
 
     InterleavedAddrGen<is_dram> addr_gen{.bank_base_address = base_addr, .page_size = page_size};
@@ -759,7 +759,7 @@ uint32_t process_relay_paged_packed_cmd(uint32_t cmd_ptr,
     uint32_t sub_cmds_length = cmd->relay_paged_packed.count * sizeof(CQPrefetchRelayPagedPackedSubCmd);
     uint32_t stride = cmd->relay_paged_packed.stride;
     ASSERT(total_length > 0);
-    DPRINT << "paged_packed: " << total_length << " " << cmd->relay_paged_packed.stride << ENDL();
+    // DPRINT << "paged_packed: " << total_length << " " << cmd->relay_paged_packed.stride << ENDL();
 
     uint32_t data_ptr = cmd_ptr + sizeof(CQPrefetchCmd);
     uint32_t remaining = cmddat_q_end - data_ptr;
@@ -789,7 +789,7 @@ uint32_t process_relay_linear_cmd(uint32_t cmd_ptr,
     uint32_t read_addr = cmd->relay_linear.addr;
     uint32_t length = cmd->relay_linear.length;
     uint32_t read_length = length;
-    DPRINT << "relay_linear: " << cmd_ptr << " " << length << " " << read_addr << " " << noc_xy_addr << ENDL();
+    // DPRINT << "relay_linear: " << cmd_ptr << " " << length << " " << read_addr << " " << noc_xy_addr << ENDL();
 
     // First step - read into DB0
     uint32_t scratch_read_addr = scratch_db_top[0];
@@ -900,7 +900,7 @@ static uint32_t process_exec_buf_relay_inline_cmd(uint32_t& cmd_ptr,
     uint32_t length = cmd->relay_inline.length;
     uint32_t data_ptr = cmd_ptr + sizeof(CQPrefetchCmd);
 
-    DPRINT << "relay_inline_exec_buf_cmd:" << length << ENDL();
+    // DPRINT << "relay_inline_exec_buf_cmd:" << length << ENDL();
     uint32_t npages = (length + downstream_cb_page_size - 1) >> downstream_cb_log_page_size;
 
     // Assume the downstream buffer is big relative to cmddat command size that we can
@@ -992,7 +992,7 @@ static uint32_t process_exec_buf_relay_paged_packed_cmd(uint32_t& cmd_ptr,
     uint32_t sub_cmds_length = cmd->relay_paged_packed.count * sizeof(CQPrefetchRelayPagedPackedSubCmd);
     uint32_t stride = cmd->relay_paged_packed.stride;
     ASSERT(total_length > 0);
-    DPRINT << "paged_packed: " << total_length << " " << cmd->relay_paged_packed.stride << ENDL();
+    // DPRINT << "paged_packed: " << total_length << " " << cmd->relay_paged_packed.stride << ENDL();
 
     uint32_t remaining_stride = exec_buf_state.length;
     uint32_t remaining = (exec_buf_state.length - sizeof(CQPrefetchCmd));
@@ -1066,12 +1066,12 @@ bool process_cmd(uint32_t& cmd_ptr,
 
     switch (cmd->base.cmd_id) {
     case CQ_PREFETCH_CMD_RELAY_LINEAR:
-        DPRINT << "relay linear: " << cmd_ptr << ENDL();
+        // DPRINT << "relay linear: " << cmd_ptr << ENDL();
         stride = process_relay_linear_cmd(cmd_ptr, downstream_data_ptr);
         break;
 
     case CQ_PREFETCH_CMD_RELAY_PAGED:
-        DPRINT << "relay dram page: " << cmd_ptr << ENDL();
+        // DPRINT << "relay dram page: " << cmd_ptr << ENDL();
         {
             uint32_t packed_page_flags = cmd->relay_paged.packed_page_flags;
             uint32_t is_dram = packed_page_flags & (1 << CQ_PREFETCH_RELAY_PAGED_IS_DRAM_SHIFT);
@@ -1087,7 +1087,7 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_RELAY_PAGED_PACKED:
-        DPRINT << "relay paged packed" << ENDL();
+        // DPRINT << "relay paged packed" << ENDL();
         if (exec_buf) {
             stride = process_exec_buf_relay_paged_packed_cmd(cmd_ptr, downstream_data_ptr);
         } else {
@@ -1096,7 +1096,7 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_RELAY_INLINE:
-        DPRINT << "relay inline" << ENDL();
+        // DPRINT << "relay inline" << ENDL();
         if (exec_buf) {
             stride = process_exec_buf_relay_inline_cmd(cmd_ptr, downstream_data_ptr);
         } else {
@@ -1105,7 +1105,7 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_RELAY_INLINE_NOFLUSH:
-        DPRINT << "inline no flush" << ENDL();
+        // DPRINT << "inline no flush" << ENDL();
         if (exec_buf) {
             stride = process_exec_buf_relay_inline_noflush_cmd(cmd_ptr, downstream_data_ptr);
         } else {
@@ -1114,7 +1114,7 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_EXEC_BUF:
-        DPRINT << "exec buf: " << cmd_ptr << ENDL();
+        // DPRINT << "exec buf: " << cmd_ptr << ENDL();
         ASSERT(!exec_buf);
         if (is_h_variant) {
             ASSERT(stall_state == STALLED); // ExecBuf must be preceded by a prefetcher stall
@@ -1124,19 +1124,19 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_EXEC_BUF_END:
-        DPRINT << "exec buf end: " << cmd_ptr << ENDL();
+        // DPRINT << "exec buf end: " << cmd_ptr << ENDL();
         ASSERT(exec_buf);
         stride = process_exec_buf_relay_inline_cmd(cmd_ptr, downstream_data_ptr);
         done = true;
         break;
 
     case CQ_PREFETCH_CMD_STALL:
-        DPRINT << "stall" << ENDL();
+        // DPRINT << "stall" << ENDL();
         stride = process_stall(cmd_ptr);
         break;
 
     case CQ_PREFETCH_CMD_DEBUG:
-        DPRINT << "debug" << ENDL();
+        // DPRINT << "debug" << ENDL();
         // Splitting debug cmds not implemented for exec_bufs (yet)
         if (exec_buf) {
             ASSERT(0);
@@ -1145,18 +1145,18 @@ bool process_cmd(uint32_t& cmd_ptr,
         break;
 
     case CQ_PREFETCH_CMD_TERMINATE:
-        DPRINT << "prefetch terminating_" << is_h_variant << is_d_variant << ENDL();;
+        // DPRINT << "prefetch terminating_" << is_h_variant << is_d_variant << ENDL();;
         ASSERT(!exec_buf);
         done = true;
         break;
 
     default:
-        DPRINT << "prefetch invalid command:" << (uint32_t)cmd->base.cmd_id << " " << cmd_ptr << " " << cmddat_q_base << ENDL();
-        DPRINT << HEX() << *(uint32_t*)cmd_ptr << ENDL();
-        DPRINT << HEX() << *((uint32_t*)cmd_ptr+1) << ENDL();
-        DPRINT << HEX() << *((uint32_t*)cmd_ptr+2) << ENDL();
-        DPRINT << HEX() << *((uint32_t*)cmd_ptr+3) << ENDL();
-        DPRINT << HEX() << *((uint32_t*)cmd_ptr+4) << ENDL();
+        // DPRINT << "prefetch invalid command:" << (uint32_t)cmd->base.cmd_id << " " << cmd_ptr << " " << cmddat_q_base << ENDL();
+        // DPRINT << HEX() << *(uint32_t*)cmd_ptr << ENDL();
+        // DPRINT << HEX() << *((uint32_t*)cmd_ptr+1) << ENDL();
+        // DPRINT << HEX() << *((uint32_t*)cmd_ptr+2) << ENDL();
+        // DPRINT << HEX() << *((uint32_t*)cmd_ptr+3) << ENDL();
+        // DPRINT << HEX() << *((uint32_t*)cmd_ptr+4) << ENDL();
         DEBUG_STATUS("!CMD");
         ASSERT(0);
     }
@@ -1222,7 +1222,7 @@ static uint32_t process_relay_inline_all(uint32_t data_ptr, uint32_t fence, bool
 // This grabs whole (possibly sets of if multiple in a page) commands
 inline uint32_t relay_cb_get_cmds(uint32_t& fence, uint32_t& data_ptr) {
 
-    DPRINT << "get_commands: " << data_ptr << " " << fence << " " << cmddat_q_base << " " << cmddat_q_end << ENDL();
+    // DPRINT << "get_commands: " << data_ptr << " " << fence << " " << cmddat_q_base << " " << cmddat_q_end << ENDL();
     if (data_ptr == fence) {
         get_cb_page<
             cmddat_q_base,
@@ -1296,7 +1296,7 @@ void kernel_main_h() {
         // Note: one fetch_q entry can contain multiple commands
         // The code below assumes these commands arrive individually, packing them would require parsing all cmds
         if (cmd_id == CQ_PREFETCH_CMD_TERMINATE) {
-            DPRINT << "prefetch terminating_10" << ENDL();
+            // DPRINT << "prefetch terminating_10" << ENDL();
             done = true;
         }
     }
@@ -1358,7 +1358,7 @@ void kernel_main_d() {
     // in case prefetch_d is connected to a depacketizing stage.
     // TODO: This should be replaced with a signal similar to what packetized
     // components use.
-    DPRINT << "prefetch_d done" << ENDL();
+    // DPRINT << "prefetch_d done" << ENDL();
     noc_semaphore_inc(get_noc_addr_helper(upstream_noc_xy, get_semaphore(upstream_cb_sem_id)), 0x80000000);
 }
 
@@ -1383,7 +1383,7 @@ void kernel_main_hd() {
 }
 
 void kernel_main() {
-    DPRINT << "prefetcher_" << is_h_variant << is_d_variant << ": start" << ENDL();
+    // DPRINT << "prefetcher_" << is_h_variant << is_d_variant << ": start" << ENDL();
 
     volatile tt_l1_ptr uint32_t* sem_addr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(get_semaphore(my_downstream_cb_sem_id));
@@ -1402,5 +1402,5 @@ void kernel_main() {
     // Confirm expected number of pages, spinning here is a leak
     cb_wait_all_pages<my_downstream_cb_sem_id>(downstream_cb_pages);
 
-    DPRINT << "prefetcher_" << is_h_variant << is_d_variant << ": out" << ENDL();
+    // DPRINT << "prefetcher_" << is_h_variant << is_d_variant << ": out" << ENDL();
 }
