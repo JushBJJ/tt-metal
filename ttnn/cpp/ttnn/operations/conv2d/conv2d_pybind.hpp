@@ -108,12 +108,9 @@ void py_module(py::module& module) {
         | b            | Conv weight TT tensor (TILED)                                                              | Tensor    |             | Yes      |
         +--------------+--------------------------------------------------------------------------------------------+-----------+-------------+----------+
         | conv_params  | Conv parameters list: kernel size H, kernel size W ,stride H,stride W,pad H,pad W          |Vector<int>|             | Yes      |
-        +--------------+--------------------------------------------------------------------------------------------+-----------+-------------+----------+
     )doc");
 
     module.def(
-        "get_conv_padded_input_shape_and_mem_config",
-        [](ttnn::Device& device,
             const ttnn::Tensor& input_tensor,
             const Conv2dConfig& conv_config,
             uint32_t batch_size,
