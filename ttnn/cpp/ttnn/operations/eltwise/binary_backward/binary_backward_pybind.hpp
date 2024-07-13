@@ -290,11 +290,6 @@ void py_module(py::module& module) {
 
     detail::bind_binary_backward(
         module,
-        ttnn::div_bw,
-        R"doc(Performs backward operations for divide of :attr:`input_tensor_a` and :attr:`input_tensor_b` with given :attr:`grad_tensor`.)doc");
-
-    detail::bind_binary_backward(
-        module,
         ttnn::binary_remainder_bw,
         R"doc(Performs backward operations for remainder of :attr:`input_tensor_a` and attr:`input_tensor_b` tensors with given attr:`grad_tensor`.)doc");
 }
