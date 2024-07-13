@@ -285,7 +285,7 @@ Pointwise Binary
    ttnn/max_bw
    ttnn/div_bw
    ttnn/lerp_bw
-   ttnn/fmod_bw
+   ttnn/binary_fmod_bw
 
 Pointwise Ternary
 =================

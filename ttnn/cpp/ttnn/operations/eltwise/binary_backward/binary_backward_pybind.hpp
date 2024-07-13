@@ -330,7 +330,7 @@ void py_module(py::module& module) {
     detail::bind_binary_backward(
         module,
         ttnn::binary_fmod_bw,
-        R"doc(Performs backward operations for fmod of :attr:`input_tensor_a` and :attr:`input_tensor_b` tensors with given :attr:`grad_tensor`.)doc");
+        R"doc(Performs backward operations for  binary_fmod of :attr:`input_tensor_a` , attr:`input_tensor_b` with given attr:`grad_tensor`.)doc");
 }
 
 }  // namespace binary_backward
