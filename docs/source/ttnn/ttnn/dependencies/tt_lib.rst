@@ -470,6 +470,8 @@ Tensor elementwise operations
 
 .. autofunction:: tt_lib.tensor.rfloor_div
 
+.. autofunction:: tt_lib.tensor.gcd
+
 Tensor relational operations
 ============================
 .. autofunction:: tt_lib.tensor.gtz

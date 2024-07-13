@@ -1153,6 +1153,24 @@ Tensor div_no_nan(const Tensor& input_a, float value, const MemoryConfig& output
     return operation::decorate_as_composite(__func__, _div_no_nan_overload)(input_a, value, output_mem_config);
 }
 
+Tensor _gcd(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
+    Tensor val;
+    Tensor tmp_result;
+    Tensor temp = full_like(input_a, 1, output_mem_config);
+    Tensor result = full_like(input_a, 0, output_mem_config);
+    for(int i=1; i < 100 ; i++)
+    {
+        val = full_like(input_a, i, output_mem_config);
+        tmp_result = where(ttnn::logical_and(ttnn::eqz(remainder(input_a,val), output_mem_config),ttnn::eqz(remainder(input_b,val), output_mem_config)), val, temp);
+        result = where(ttnn::gt(tmp_result, result),tmp_result, result);
+    }
+    result =  where(ttnn::logical_and(ttnn::eqz(input_a),ttnn::eqz(input_b)), full_like(input_a, 0, output_mem_config), result);
+    return result;
+ }
+Tensor gcd(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
+    return operation::decorate_as_composite(__func__, _gcd)(input_a, input_b, output_mem_config);
+}
+
 Tensor _remainder(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
     DataType input_dtype = input_a.get_dtype();
     Tensor a = ttnn::typecast(input_a, DataType::FLOAT32);

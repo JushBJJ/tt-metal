@@ -288,6 +288,10 @@ op_map = {
         "tt_op": tt_lib_ops.eltwise_unary_div_no_nan,
         "pytorch_op": pytorch_ops.unary_div_no_nan,
     },
+    "eltwise-gcd": {
+        "tt_op": tt_lib_ops.eltwise_gcd,
+        "pytorch_op": pytorch_ops.gcd,
+    },
     "eltwise-square": {
         "tt_op": tt_lib_ops.eltwise_square,
         "pytorch_op": pytorch_ops.square,

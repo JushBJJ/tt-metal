@@ -799,6 +799,11 @@ def unary_div_no_nan(x, *args, **kwargs):
     return result
 
 
+def gcd(x, y, *args, **kwargs):
+    result = torch.gcd(x, y)
+    return result
+
+
 def div_unary(x, *args, scalar, **kwargs):
     result = torch.div(x, scalar)
     return result

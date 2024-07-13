@@ -1269,6 +1269,23 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
 
+        m_tensor.def("gcd",&gcd,
+            py::arg("input_a").noconvert(),py::arg("input_b"),py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,R"doc(
+            Performs the element-wise greatest common divisor operation on tensors ``input_a`` and  ``input_b``. Support provided only for Wormhole_B0.
+
+            Input tensor must have  INT32 data type.
+
+            Output tensor will have INT32 data type.
+
+            .. csv-table::
+                :header: "Argument", "Description", "Data type", "Valid range", "Required"
+
+                "input_a", "First input Tensor", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
+                "input_b", "Second input Tensor", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
+                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
+        )doc");
+
+
         m_tensor.def("remainder",&remainder,
             py::arg("input_a").noconvert(), py::arg("input_b").noconvert(), py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG, R"doc(
             Performs the element-wise modulus on two tensors ``input_a`` and ``input_b``.Support provided only for Wormhole_B0.
