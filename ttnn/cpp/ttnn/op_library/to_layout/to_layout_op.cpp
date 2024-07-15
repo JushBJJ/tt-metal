@@ -6,6 +6,7 @@
 
 
 
+#include "tt_dnn/op_library/work_split_tilize.hpp"
 #include "ttnn/operations/data_movement/tilize/tilize.hpp"
 #include "ttnn/operations/data_movement/tilize_with_val_padding/tilize_with_val_padding.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/untilize/untilize_op.hpp"
@@ -36,6 +37,44 @@ inline bool use_multicore_device_tilize(
     uint32_t max_tiles = max_l1_size / (input_single_tile_size + output_single_tile_size);  // 2 CBs
 
     return num_tiles_in_row <= max_tiles;
+}
+
+
+inline bool use_multicore_device_untilize(
+    const Tensor& input, const std::optional<tt::tt_metal::DataType>& output_dtype, bool out_sharded) {
+
+    bool src_sharded = input.memory_config().is_sharded();
+    tt::DataFormat input_cb_data_format = tt::tt_metal::datatype_to_dataformat_converter(input.get_dtype());
+    uint32_t input_single_tile_size = tt::tt_metal::detail::TileSize(input_cb_data_format);
+    auto device = input.device();
+
+    uint32_t output_single_tile_size =
+        output_dtype.has_value()
+            ? tt::tt_metal::detail::TileSize(tt::tt_metal::datatype_to_dataformat_converter(output_dtype.value()))
+            : input_single_tile_size;
+
+    uint32_t ntiles = input.volume() / (TILE_WIDTH * TILE_WIDTH);
+    uint32_t ntiles_per_block = input.get_legacy_shape()[-1] / TILE_WIDTH;
+    uint32_t nblocks = ceil((float)ntiles / ntiles_per_block);
+
+    auto grid_size = device->compute_with_storage_grid_size();
+    auto [ncores, all_cores, core_range, core_range_cliff, nblocks_per_core, nblocks_per_core_cliff] =
+        tt::tt_metal::split_blocks_for_tilize(grid_size, nblocks);
+
+    if (src_sharded) {
+        auto shard_spec = input.shard_spec().value();
+        ntiles_per_block = shard_spec.shape[1] / TILE_WIDTH;
+        nblocks_per_core = shard_spec.shape[0] / TILE_HEIGHT;
+
+    }
+    uint32_t num_input_tiles = src_sharded ? ntiles_per_block * nblocks_per_core : ntiles_per_block * 2;
+    uint32_t num_output_tiles = out_sharded ? ntiles_per_block * nblocks_per_core : ntiles_per_block * 2;
+
+    uint32_t l1_needed = num_input_tiles * input_single_tile_size + num_output_tiles * output_single_tile_size;
+
+    uint32_t max_l1_size = input.device()->l1_size_per_core() / 2 - L1_UNRESERVED_BASE;
+
+    return l1_needed <= max_l1_size;
 }
 
 template <typename T>
@@ -107,7 +146,7 @@ Tensor execute_on_worker_thread(
         memory_config.value_or(ttnn::get_memory_config(tensor).value_or(ttnn::DRAM_MEMORY_CONFIG));
 
     if (ttnn::is_tensor_on_device_or_multidevice(tensor_arg)) {
-        bool use_multicore_untilize = true;
+        bool use_multicore_untilize = use_multicore_device_untilize(tensor, dtype, output_memory_config.is_sharded());
         bool use_multicore_tilize = use_multicore_device_tilize(tensor, dtype);
 
         if (not requires_padding_change(layout, tensor.get_shape())) {

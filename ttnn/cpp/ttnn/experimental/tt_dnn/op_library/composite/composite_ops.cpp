@@ -9,7 +9,6 @@
 #include "ttnn/experimental/tt_dnn/op_library/copy/copy_op.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/math.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/optimizer/optimizer_ops.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/permute/permute_op.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/prod/prod_nc_op.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/prod/prod_op_all.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/reduce/reduce_op.hpp"
@@ -17,6 +16,7 @@
 #include "ttnn/experimental/tensor/tensor_impl.hpp"
 #include "ttnn/experimental/tensor/tensor_utils.hpp"
 #include "ttnn/operations/data_movement/slice/slice.hpp"
+#include "ttnn/operations/data_movement/permute/permute.hpp"
 #include "tt_numpy/functions.hpp"
 
 #include "ttnn/operations/eltwise/binary/binary.hpp"
@@ -801,11 +801,21 @@ Tensor addalpha(
         cq_id, input_a, input_b, alpha, output_mem_config, output_tensor);
 }
 
+inline Tensor reshape_with_padding (const Tensor &input_tensor, int N, int C, int H, int W, const MemoryConfig& output_mem_config) {
+    if(input_tensor.get_legacy_shape() != input_tensor.get_legacy_shape().without_padding()){
+        Tensor reshape_in = ttnn::to_layout(input_tensor, ttnn::ROW_MAJOR_LAYOUT, std::nullopt, std::nullopt, (Device*)nullptr);
+        return reshape(reshape_in, N, C, H, W, output_mem_config);
+    }
+    else {
+        return reshape(input_tensor, N, C, H, W, output_mem_config);
+    }
+}
+
 // repeat interleave supports repeats as 1 to inf, dim between 0 to 2
 Tensor _repeat_interleave(const Tensor& input_a, uint32_t repeat, int32_t dim, const MemoryConfig& output_mem_config) {
     std::vector<Tensor> combined_tensors;
     combined_tensors.reserve(repeat);
-    auto shape_wh = input_a.get_legacy_shape();
+    auto shape_wh = input_a.get_legacy_shape().without_padding();
     // normalizing the negative dim
     uint32_t normalized_dim = input_a.get_legacy_shape().get_normalized_index(dim);
     // check if dim is 1 or 3
@@ -813,9 +823,10 @@ Tensor _repeat_interleave(const Tensor& input_a, uint32_t repeat, int32_t dim, c
         constexpr uint32_t tmp_dim = 2;
         std::vector<int64_t> dims = {0, 1, 2, 3};
         std::swap(dims[dim], dims[tmp_dim]);
-        Tensor transpose_input = permute(input_a, dims);
+        Tensor transpose_input = ttnn::permute(input_a, dims);
         Tensor ril_result = _repeat_interleave(transpose_input, repeat, tmp_dim, output_mem_config);
-        return permute(ril_result, dims);
+        auto permute_out = ttnn::permute(ril_result, dims);
+        return permute_out;
     }
 
     if (normalized_dim <= 1) {
@@ -825,21 +836,23 @@ Tensor _repeat_interleave(const Tensor& input_a, uint32_t repeat, int32_t dim, c
         // TODO: For dim = 1 facing issue with concat_op
         if (normalized_dim) {
             Tensor concat_out = concat(combined_tensors, 2, output_mem_config);
-            return reshape(concat_out, shape_wh[0], shape_wh[1] * repeat, shape_wh[2], shape_wh[3], output_mem_config);
+            return reshape_with_padding(concat_out, shape_wh[0], shape_wh[1] * repeat, shape_wh[2], shape_wh[3], output_mem_config);
         } else {
             Tensor concat_out = concat(combined_tensors, 1, output_mem_config);
-            return reshape(concat_out, shape_wh[0] * repeat, shape_wh[1], shape_wh[2], shape_wh[3], output_mem_config);
+            return reshape_with_padding(concat_out, shape_wh[0] * repeat, shape_wh[1], shape_wh[2], shape_wh[3], output_mem_config);
         }
     } else {
-        Tensor reshape_out =
-            reshape(input_a, 1, 1, shape_wh[0] * shape_wh[1] * shape_wh[2], shape_wh[3], output_mem_config);
+        //Until Reshape is fixed for TTNN need to RM before reshape
+        Tensor reshape_out = reshape_with_padding(input_a, 1, 1, shape_wh[0] * shape_wh[1] * shape_wh[2], shape_wh[3], output_mem_config);
         for (int i = 0; i < repeat; i++) {
             combined_tensors.push_back(reshape_out);
         }
-        Tensor concat_out = concat(combined_tensors, 1, output_mem_config);
+        auto concat_out = concat(combined_tensors, 1, output_mem_config); //1,1,1024,32
+        auto concat_layout = concat_out.get_layout(); //TILE
         std::vector<int64_t> permute_dims = {0, 2, 1, 3};
-        Tensor permute_out = permute(concat_out, permute_dims, output_mem_config);
-        return reshape(permute_out, shape_wh[0], shape_wh[1], shape_wh[2] * repeat, shape_wh[3], output_mem_config);
+        auto permute_out = ttnn::permute(concat_out, permute_dims, output_mem_config); //1,1024,1,32
+        Tensor reshape_out_result = reshape_with_padding(permute_out, shape_wh[0], shape_wh[1], shape_wh[2] * repeat, shape_wh[3], output_mem_config); //1,32,32,32
+        return reshape_out_result;
     }
 }
 Tensor repeat_interleave(const Tensor& input_a, uint32_t repeat, int32_t dim, const MemoryConfig& output_mem_config) {
@@ -1338,10 +1351,16 @@ Tensor _prod(const Tensor& input_a, bool all_dimensions, int64_t dim, const Memo
     // Permute for dim 2,3
     if (dim == 2 || dim == -2) {
         std::vector<int64_t> permute_dims = {2, 0, 1, 3};
-        temp = permute(input_a, permute_dims, output_mem_config);
+        temp = ttnn::permute(input_a, permute_dims, output_mem_config);
+        if(temp.volume() != input_a.volume()) {
+            temp = ttnn::to_layout(temp, ttnn::ROW_MAJOR_LAYOUT, std::nullopt, std::nullopt, (Device*)nullptr);
+        }
     } else if (dim == 3 || dim == -1) {
         std::vector<int64_t> permute_dims = {3, 0, 1, 2};
-        temp = permute(input_a, permute_dims, output_mem_config);
+        temp = ttnn::permute(input_a, permute_dims, output_mem_config);
+        if(temp.volume() != input_a.volume()) {
+            temp = ttnn::to_layout(temp, ttnn::ROW_MAJOR_LAYOUT, std::nullopt, std::nullopt, (Device*)nullptr);
+        }
     }
     Tensor result = tt::tt_metal::prod_nc(temp, dim, output_mem_config);
     // Permute and unpad result for dim 2,3
@@ -1349,7 +1368,10 @@ Tensor _prod(const Tensor& input_a, bool all_dimensions, int64_t dim, const Memo
         return result;
     } else if (dim == 2 || dim == -2) {
         std::vector<int64_t> after_permute_dims = {1, 2, 0, 3};
-        Tensor required = permute(result, after_permute_dims, output_mem_config);
+        Tensor required = ttnn::permute(result, after_permute_dims, output_mem_config);
+        if(result.volume() != required.volume()) {
+            required = ttnn::to_layout(required, ttnn::ROW_MAJOR_LAYOUT, std::nullopt, std::nullopt, (Device*)nullptr);
+        }
         Shape input_shape = input_a.get_legacy_shape();
         std::vector<uint32_t> start_index = {0, 0, 0, 0};
         std::vector<uint32_t> end_index = {input_shape[0] - 1, input_shape[1] - 1, 0, input_shape[3] - 1};
@@ -1357,7 +1379,11 @@ Tensor _prod(const Tensor& input_a, bool all_dimensions, int64_t dim, const Memo
     } else {  // dim 3
         // permute
         std::vector<int64_t> after_permute_dims = {1, 2, 0, 3};
-        Tensor required = permute(result, after_permute_dims, output_mem_config);
+        Tensor required = ttnn::permute(result, after_permute_dims, output_mem_config);
+        auto orig_layout = required.get_layout();
+        if(result.volume() != required.volume()) {
+            required = ttnn::to_layout(required, ttnn::ROW_MAJOR_LAYOUT, std::nullopt, std::nullopt, (Device*)nullptr);
+        }
         // unpad
         Shape input_shape = input_a.get_legacy_shape();
         std::vector<uint32_t> start_index = {0, 0, 0, 0};
@@ -1365,7 +1391,8 @@ Tensor _prod(const Tensor& input_a, bool all_dimensions, int64_t dim, const Memo
         Tensor new_unpad_tensor = ttnn::slice(0, required, start_index, end_index, std::nullopt);
         // permute back
         after_permute_dims = {0, 1, 3, 2};
-        return permute(new_unpad_tensor, after_permute_dims, output_mem_config);
+        new_unpad_tensor = ttnn::to_layout(new_unpad_tensor, orig_layout, std::nullopt, std::nullopt, (Device*)nullptr);
+        return ttnn::permute(new_unpad_tensor, after_permute_dims, output_mem_config);
     }
 }
 
@@ -2111,7 +2138,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                         permute_dims[3] = 3;
                     }
                     result.deallocate();
-                    Tensor transpose_res = permute(res_index, permute_dims, output_mem_config);
+                    Tensor transpose_res = ttnn::permute(res_index, permute_dims, output_mem_config);
                     return {transpose_res};
                 } else if ((dim == (input_shape.rank() - 3)) || (dim == (input_shape.rank() - 4))) {
                     bool is_channel = (dim == (input_shape.rank() - 3));
@@ -2143,7 +2170,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                     res_index.deallocate();
                     if (is_channel) {
                         std::vector<int64_t> permute_dims = {1, 0, 2, 3};
-                        Tensor transpose_res = permute(result, permute_dims, output_mem_config);
+                        Tensor transpose_res = ttnn::permute(result, permute_dims, output_mem_config);
                         return {transpose_res};
                     } else {
                         return {result};
