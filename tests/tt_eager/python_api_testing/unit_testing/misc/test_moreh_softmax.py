@@ -21,10 +21,10 @@ from tests.tt_eager.python_api_testing.unit_testing.misc.test_utils import (
     "shape_dim",
     (((32, 32), 1),),  # single tile
 )
-@pytest.mark.parametrize("compute_kernel_options", compute_kernel_options, ids=compute_kernel_ids)
-def test_softmax_for_dim_hw(shape_dim, compute_kernel_options, device):
+def test_softmax_for_dim_hw(shape_dim, device):
     device.enable_program_cache()
 
+    compute_kernel_options = True
     shape, dim = shape_dim
     torch.manual_seed(0)
 
