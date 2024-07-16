@@ -118,6 +118,16 @@ operation::ProgramWithCallbacks moreh_softmax_w_small(const Tensor &input, const
     }
 
     // create compute kernel
+    bool preserve_fp32_precision = true;
+    // bool preserve_fp32_precision = false;
+    log_debug(
+        LogOp,
+        "math_fidelity {} math_approx_mode {} fp32_dest_acc_en {} preserve_fp32_precision {} packer_l1_acc {}",
+        math_fidelity,
+        math_approx_mode,
+        fp32_dest_acc_en,
+        preserve_fp32_precision,
+        packer_l1_acc);
     CreateComputeKernel(
         program,
         "tt_eager/tt_dnn/op_library/moreh_softmax/kernels/moreh_softmax_w.cpp",
@@ -128,7 +138,8 @@ operation::ProgramWithCallbacks moreh_softmax_w_small(const Tensor &input, const
         compute_defines,
         math_fidelity,
         fp32_dest_acc_en,
-        math_approx_mode);
+        math_approx_mode,
+        preserve_fp32_precision);
 
     // Set Runtime Args
     auto core_x_offset = core_range.start.x;

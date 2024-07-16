@@ -32,6 +32,13 @@ void kernel_main() {
     generate_bcast_scaler(cb_scaler, scaler);
     generate_mask_w(cb_mask, mask_w);
 
+    Scalar val1, val2;
+    val1.f = 10.0f;
+    val2.f = 0.1f;
+
+    fill_cb_with_value(tt::CB::c_intermed0, val1.u);
+    fill_cb_with_value(tt::CB::c_intermed1, val2.u);
+
     // read ublocks from src0 to CB0, then push ublocks to compute (unpacker)
     uint32_t curr_tile = tile_offset;
     for (uint32_t i = 0; i < N; i += onetile) {
