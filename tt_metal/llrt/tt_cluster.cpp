@@ -286,9 +286,12 @@ void Cluster::open_driver(
         TT_FATAL(device_driver->get_target_mmio_device_ids().size() == 1);
     } else if (this->target_type_ == TargetDevice::Versim) {
         device_driver = std::make_unique<tt_VersimDevice>(sdesc_path, this->cluster_desc_path_);
-    } else if (this->target_type_ == TargetDevice::VCS) {
+    } 
+#ifdef TT_METAL_SIMULATOR_EN
+    else if (this->target_type_ == TargetDevice::VCS) {
         device_driver = std::make_unique<tt_SimulationDevice>(sdesc_path, this->cluster_desc_path_);
     }
+#endif
     device_driver->set_device_dram_address_params(dram_address_params);
     device_driver->set_device_l1_address_params(l1_address_params);
 
