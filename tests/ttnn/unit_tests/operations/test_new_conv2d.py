@@ -371,16 +371,23 @@ def test_conv_ws(
     tt_weight_tensor = ttnn.from_torch(
         torch_weight_tensor, weights_dtype if weights_dtype != ttnn.bfloat8_b else ttnn.float32
     )
-    compute_grid_size = device.compute_with_storage_grid_size()
-    core_range_set = ttnn.experimental.tensor.num_cores_to_corerange_set(4, compute_grid_size, True)
-    print(core_range_set)
-    shard_shape = [batch_size * input_height * input_width, input_channels // 4]
-    shard_grid = get_shard_grid_from_num_cores(4, device)
-
-    shard_spec = ttnn.ShardSpec(shard_grid, shard_shape)  # ttnn.ShardOrientation.ROW_MAJOR, False)
+    ncores = 4
+    shard_grid = get_shard_grid_from_num_cores(ncores, device)
+    shard_orientation = ttnn.experimental.tensor.ShardOrientation.ROW_MAJOR
+    print(type(shard_grid))
+    shard_spec = ttnn.experimental.tensor.ShardSpec(
+        shard_grid, (input_height * input_width * batch_size, input_channels // ncores), shard_orientation, False
+    )
     tensor_memory_layout = ttnn.types.TensorMemoryLayout.WIDTH_SHARDED
     in_sharded_mem_config = ttnn.MemoryConfig(tensor_memory_layout, ttnn.types.BufferType.L1, shard_spec)
-    tt_input_tensor = ttnn.from_torch(torch_input_tensor, ttnn.bfloat16)
+
+    compute_grid_size = device.compute_with_storage_grid_size()
+    core_range_set = ttnn.experimental.tensor.CoreRangeSet(
+        ttnn.experimental.tensor.num_cores_to_corerange_set(4, compute_grid_size, True)
+    )
+    shard_shape = [batch_size * input_height * input_width, input_channels // 4]
+
+    tt_input_tensor = ttnn.from_torch(torch_input_tensor, device=device, dtype=ttnn.bfloat16)
     tt_input_tensor = ttnn.to_memory_config(tt_input_tensor, memory_config=in_sharded_mem_config)
     tt_input_tensor = ttnn.to_layout(tt_input_tensor, ttnn.ROW_MAJOR_LAYOUT)
     # breakpoint()
@@ -388,7 +395,7 @@ def test_conv_ws(
         dtype=ttnn.bfloat16,
         weights_dtype=ttnn.bfloat16,
         math_fidelity=ttnn.MathFidelity.LoFi,
-        height_sharding=True,
+        height_sharding=False,
         input_channels_alignment=32,
         deallocate_activation=deallocate_activation,
         fp32_dest_acc_enabled=fp32_accum,
@@ -396,6 +403,7 @@ def test_conv_ws(
         enable_act_double_buffer=False,
         enable_split_reader=False,
         enable_subblock_padding=False,
+        reshard_if_not_optimal=False,
     )
 
     [tt_output_tensor_on_device, out_height, out_width, weights_device, bias_device] = ttnn.conv2d(

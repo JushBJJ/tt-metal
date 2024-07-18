@@ -808,9 +808,9 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_sharded_v2_impl(
     uint32_t num_blocks_out_h_per_core = (per_core_out_matrix_height_ntiles + out_block_h_ntiles-1) / out_block_h_ntiles;
     bool act_height_sliced = per_core_out_matrix_height_ntiles < act_matrix_height_ntiles;
     if (not act_height_sliced) {
-        assert(num_blocks_act_h_per_core == num_blocks_act_h);
-        assert(num_blocks_out_h_per_core == num_blocks_out_h);
-        assert(num_cores_x == 1);
+        TT_ASSERT(num_blocks_act_h_per_core == num_blocks_act_h);
+        TT_ASSERT(num_blocks_out_h_per_core == num_blocks_out_h);
+        TT_ASSERT(num_cores_x == 1);
     }
     uint32_t act_block_h_datums_last_block = (per_core_out_matrix_height_ntiles - (num_blocks_act_h_per_core - 1) * act_block_h_ntiles) * TILE_HEIGHT;
 
@@ -818,28 +818,28 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_sharded_v2_impl(
     log_debug(LogOp, "num_blocks_act_h_per_core: {}", num_blocks_act_h_per_core);
     log_debug(LogOp, "num_blocks_out_h_per_core: {}", num_blocks_out_h_per_core);
 
-    assert(act_matrix_height_ntiles % per_core_out_matrix_height_ntiles == 0);
+    TT_ASSERT(act_matrix_height_ntiles % per_core_out_matrix_height_ntiles == 0);
     uint32_t total_active_num_cores_per_weight_slice = act_matrix_height_ntiles / per_core_out_matrix_height_ntiles;
-    assert(total_active_num_cores_per_weight_slice <= total_num_cores_per_weight_slice);
+    TT_ASSERT(total_active_num_cores_per_weight_slice <= total_num_cores_per_weight_slice);
     uint32_t total_noop_cores = total_num_cores_per_weight_slice - total_active_num_cores_per_weight_slice;
     uint32_t total_active_num_cores = total_active_num_cores_per_weight_slice * num_weight_slices_width;
     if (weight_width_sliced) {
-        assert(total_noop_cores == 0);
-        assert(total_active_num_cores == total_num_cores);
+        TT_ASSERT(total_noop_cores == 0);
+        TT_ASSERT(total_active_num_cores == total_num_cores);
     }
 
     if (has_bias) {
-        assert(bias_ntiles % num_weight_slices_width == 0);
-        assert(bias_ntiles == weight_matrix_width_ntiles);
+        TT_ASSERT(bias_ntiles % num_weight_slices_width == 0);
+        TT_ASSERT(bias_ntiles == weight_matrix_width_ntiles);
     }
     uint32_t bias_ntiles_per_core = bias_ntiles / num_weight_slices_width;
 
     CoreRange all_cores(CoreCoord(0, 0), CoreCoord(num_cores_x - 1, num_cores_y - 1));
-    assert(total_active_num_cores >= num_cores_x);
+    TT_ASSERT(total_active_num_cores >= num_cores_x);
     uint32_t num_active_cores_x = num_cores_x;
     uint32_t num_active_cores_y_with_full_x = total_active_num_cores / num_cores_x;
     uint32_t num_active_cores_x_last_y = total_active_num_cores % num_cores_x;
-    assert((num_active_cores_x * num_active_cores_y_with_full_x) + num_active_cores_x_last_y == total_active_num_cores);
+    TT_ASSERT((num_active_cores_x * num_active_cores_y_with_full_x) + num_active_cores_x_last_y == total_active_num_cores);
 
     std::set<CoreRange> all_active_cores_set;
     all_active_cores_set.insert(
