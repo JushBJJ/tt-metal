@@ -15,14 +15,11 @@ concurrency:
 jobs:
   package-push-docs:
     strategy:
-      # Do not fail-fast because we need to ensure all tests go to completion
-      # so we try not to get hanging machines
-      fail-fast: false
       matrix:
         arch: [grayskull]
     env:
       TT_METAL_ENV: ${{ vars.TT_METAL_ENV }}
-      DOCS_VERSION: v0.50.0
+      DOCS_VERSION: ${{ GITHUB_REF_NAME }}
       ARCH_NAME: ${{ matrix.arch }}
       LOGURU_LEVEL: INFO
       LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
@@ -49,7 +46,6 @@ jobs:
         run: tar -xvf ttm_${{ matrix.arch }}.tar
       - uses: ./.github/actions/install-python-deps
       - name: Build Doxygen Docs
-        timeout-minutes: 15
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -63,8 +59,8 @@ jobs:
           git config --global user.email "${GITHUB_USER}@tenstorrent.com"
           git config --global user.name "${GITHUB_USER}"
           echo "About to clone"
-          git clone https://${GITHUB_USER}:${{ secrets.TTBOT_DOCS_ACCESS }}@github.com/tenstorrent/docs-test.git
-          git remote set-url origin https://${GITHUB_USER}::${{ secrets.TTBOT_DOCS_ACCESS }}@github.com/tenstorrent/docs-test.git
+          git clone https://${GITHUB_USER}:${{ secrets.TTBOT_DOCS_ACCESS }}@github.com/tenstorrent/tenstorrent.github.io
+          git remote set-url origin https://${GITHUB_USER}::${{ secrets.TTBOT_DOCS_ACCESS }}@github.com/tenstorrent/tenstorrent.github.io
       - name: Package TT-Metalium Docs
         run: |
           echo "Preparing tt-metalium docs assets"
