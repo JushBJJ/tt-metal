@@ -11,6 +11,8 @@
 
 #include "device/pad_op.hpp"
 
+#include "tt_metal/common/logger.hpp"
+
 #include <ranges>
 
 
@@ -249,9 +251,6 @@ struct ExecutePad {
         TT_FATAL(
             padding.size() == original_rank,
             "ttnn.pad: padding must be the same length as the input tensor rank");
-        TT_FATAL(
-            input_tensor.get_layout() != ttnn::ROW_MAJOR_LAYOUT,
-            "ttnn.pad: row-major tensors have to use fallback because the kernel currently causes a PCC error");
 
         // Unsqueeze Tensor to 4D if it is not already
         ttnn::Tensor input_tensor_4D = ttnn::unsqueeze_to_4D(input_tensor);
@@ -275,11 +274,12 @@ struct ExecutePad {
 
         const int target_height = output_padded_shape[padding.size() - 2];
         const int target_width = output_padded_shape[padding.size() - 1];
-        TT_FATAL(
-            target_height % ttnn::TILE_SIZE == 0 || target_width % ttnn::TILE_SIZE == 0,
-            "ttnn.pad: for tiled tensors padding end must be a multiple of the tile size on height and width for a "
-            "tensor in tile layout");
-
+        if (input_tensor.get_layout() == ttnn::TILE_LAYOUT) {
+            TT_FATAL(
+                target_height % ttnn::TILE_SIZE == 0 || target_width % ttnn::TILE_SIZE == 0,
+                "ttnn.pad: for tiled tensors padding end must be a multiple of the tile size on height and width for a "
+                "tensor in tile layout");
+        }
         // Performing actual padding
         ShapeType pad_front_array;
         for(size_t i = 0; i < pad_front.size(); i++) {
