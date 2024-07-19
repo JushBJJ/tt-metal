@@ -4,13 +4,11 @@
 
 #include "ttnn/op_library/to_layout/to_layout_op.hpp"
 
-
-
+#include "ttnn/operations/core.hpp"
 #include "ttnn/operations/data_movement/tilize/tilize.hpp"
 #include "ttnn/operations/data_movement/tilize_with_val_padding/tilize_with_val_padding.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/untilize/untilize_op.hpp"
-#include "ttnn/operations/core.hpp"
-
+#include "ttnn/operations/data_movement/untilize/untilize.hpp"
+#include "ttnn/operations/data_movement/untilize_with_unpadding/untilize_with_unpadding.hpp"
 
 namespace ttnn {
 
@@ -113,7 +111,7 @@ Tensor execute_on_worker_thread(
         if (not requires_padding_change(layout, tensor.get_shape())) {
             if (layout == ttnn::ROW_MAJOR_LAYOUT) {
                 TT_ASSERT(not dtype.has_value(), "dtype cannot be specified when converting to ROW_MAJOR_LAYOUT!");
-                return tt::tt_metal::untilize(tensor, output_memory_config, use_multicore_untilize);
+                return ttnn::untilize(tensor, output_memory_config, use_multicore_untilize);
             } else if (layout == ttnn::TILE_LAYOUT) {
                 if (tensor.is_sharded()) {
                     const auto shard_shape = get_memory_config(tensor).value().shard_spec.value().shape;
@@ -142,8 +140,8 @@ Tensor execute_on_worker_thread(
                 output_tensor_end.push_back(tensor.get_shape()[index] - 1);
             }
 
-            tensor = tt::tt_metal::untilize_with_unpadding(
-                tensor, output_tensor_end, output_memory_config, use_multicore_untilize);
+            tensor =
+                ttnn::untilize_with_unpadding(tensor, output_tensor_end, output_memory_config, use_multicore_untilize);
             return reshape(tensor, ttnn::Shape(tt::tt_metal::Shape{output_shape}));
 
         } else if (layout == ttnn::TILE_LAYOUT) {
