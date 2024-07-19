@@ -166,9 +166,11 @@ def run_conv(
             torch_input_tensor,
             [batch_size, input_height, input_width, input_channels],
             use_shallow_conv_variant,
-            mem_config=conv.conv.input_sharded_memory_config
-            if config_override is not None and "act_reshard_num_cores_nhw" in config_override
-            else None,
+            mem_config=(
+                conv.conv.input_sharded_memory_config
+                if config_override is not None and "act_reshard_num_cores_nhw" in config_override
+                else None
+            ),
         )
     else:
         tt_input_tensor = ttnn.from_torch(torch_input_tensor, ttnn.bfloat16)
