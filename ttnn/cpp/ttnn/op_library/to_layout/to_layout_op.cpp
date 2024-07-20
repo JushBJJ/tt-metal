@@ -44,6 +44,8 @@ inline bool use_multicore_device_untilize(
     const Tensor& input, const std::optional<tt::tt_metal::DataType>& output_dtype, bool out_sharded) {
 
     bool src_sharded = input.memory_config().is_sharded();
+    if(src_sharded or out_sharded)
+        return true;
     tt::DataFormat input_cb_data_format = tt::tt_metal::datatype_to_dataformat_converter(input.get_dtype());
     uint32_t input_single_tile_size = tt::tt_metal::detail::TileSize(input_cb_data_format);
     auto device = input.device();
@@ -53,29 +55,10 @@ inline bool use_multicore_device_untilize(
             ? tt::tt_metal::detail::TileSize(tt::tt_metal::datatype_to_dataformat_converter(output_dtype.value()))
             : input_single_tile_size;
 
-    uint32_t ntiles = input.volume() / (TILE_WIDTH * TILE_WIDTH);
     uint32_t ntiles_per_block = input.get_legacy_shape()[-1] / TILE_WIDTH;
-    uint32_t nblocks = ceil((float)ntiles / ntiles_per_block);
 
-    if(nblocks == 0)
-        return false;
-
-
-    auto grid_size = device->compute_with_storage_grid_size();
-    auto [ncores, all_cores, core_range, core_range_cliff, nblocks_per_core, nblocks_per_core_cliff] =
-        tt::tt_metal::split_blocks_for_tilize(grid_size, nblocks);
-
-    if(nblocks_per_core == 0)
-        return false;
-
-    if (src_sharded) {
-        auto shard_spec = input.shard_spec().value();
-        ntiles_per_block = shard_spec.shape[1] / TILE_WIDTH;
-        nblocks_per_core = shard_spec.shape[0] / TILE_HEIGHT;
-
-    }
-    uint32_t num_input_tiles = src_sharded ? ntiles_per_block * nblocks_per_core : ntiles_per_block * 2;
-    uint32_t num_output_tiles = out_sharded ? ntiles_per_block * nblocks_per_core : ntiles_per_block * 2;
+    uint32_t num_input_tiles =  ntiles_per_block * 2;
+    uint32_t num_output_tiles = ntiles_per_block * 2;
 
     uint32_t l1_needed = num_input_tiles * input_single_tile_size + num_output_tiles * output_single_tile_size;
 
