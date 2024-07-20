@@ -35,6 +35,31 @@ const uint32_t untilize_mode_reblock_cb = CB::c_intermed2;
 const uint32_t out0_cb = CB::c_out0;
 const uint32_t temp_sum_cb = CB::c_intermed3;
 
+
+operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
+    tt_metal::Program& program,
+    const Tensor& a,
+    const Tensor& b,
+    const Shape& ashape,
+    std::optional<const Tensor> bias,
+    const std::optional<const Tensor> conv_reader_indices,
+    vector<int> conv_params,
+    uint32_t output_channels,
+    bool untilize_out,
+    bool has_bias,
+    bool fuse_relu,
+    const OptimizedConvParallelizationConfig& parallelization_config,
+    const OptimizedConvBlockConfig& block_config,
+    uint32_t extra_padding_for_32B_alignment,
+    bool use_shallow_conv_variant,
+    bool transpose_mcast,
+    Tensor& output,
+    DeviceComputeKernelConfig compute_kernel_config,
+    bool enable_act_double_buffer,
+    bool enable_split_reader,
+    bool enable_subblock_padding);
+
+
 // TODO: Add namespace for utilities?
 tuple<CBHandle, CBHandle> create_CBs_for_sharded_input_v2(
     tt_metal::Program& program,
@@ -1667,6 +1692,31 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_sharded_v2_(
     bool enable_split_reader,
     bool enable_subblock_padding) {
     tt_metal::Program program = tt_metal::CreateProgram();
+    if(a.memory_config().memory_layout==TensorMemoryLayout::WIDTH_SHARDED)
+    {
+        return multi_core_optimized_conv_width_sharded_v2_impl(
+        program,
+        a,
+        b,
+        ashape,
+        bias,
+        conv_reader_indices,
+        conv_params,
+        output_channels,
+        untilize_out,
+        has_bias,
+        fuse_relu,
+        parallelization_config,
+        block_config,
+        extra_padding_for_32B_alignment,
+        use_shallow_conv_variant,
+        transpose_mcast,
+        output,
+        compute_kernel_config,
+        enable_act_double_buffer,
+        enable_split_reader,
+        enable_subblock_padding);
+    }
     return multi_core_optimized_conv_sharded_v2_impl(
         program,
         a,
@@ -1774,6 +1824,31 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_sharded_v2_new(
 
     // add config tensor to program
     tt::tt_metal::detail::AddConfigBuffer(program, conv_reader_indices_tensor.device_buffer());
+    if(a.memory_config().memory_layout==TensorMemoryLayout::WIDTH_SHARDED)
+    {
+        return multi_core_optimized_conv_width_sharded_v2_impl(
+        program,
+        a,
+        b,
+        Shape(input_tensor_shape),
+        bias,
+        conv_reader_indices_tensor,
+        conv_params,
+        output_channels,
+        untilize_out,
+        bias.has_value(),
+        fuse_relu,
+        parallelization_config,
+        block_config,
+        extra_padding_for_32B_alignment,
+        use_shallow_conv_variant,
+        parallel_config.shard_orientation == ShardOrientation::COL_MAJOR,
+        output,
+        compute_kernel_config.value(),
+        enable_act_double_buffer,
+        enable_split_reader,
+        enable_subblock_padding);
+    }
     return multi_core_optimized_conv_sharded_v2_impl(
         program,
         a,

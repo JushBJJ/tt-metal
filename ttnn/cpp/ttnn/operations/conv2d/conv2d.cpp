@@ -170,7 +170,7 @@ MemoryConfig create_sharded_memory_config_from_parallel_config(
 }
 
 tt::tt_metal::OptimizedConvParallelizationConfig determine_conv_op_parallel_config_from_conv_output_mem_config(
-    const MemoryConfig& conv_output_mem_config, uint32_t num_cores_nhw) {
+    const MemoryConfig& conv_output_mem_config, uint32_t num_cores_nhw, uint32_t num_cores_c) {
     TT_ASSERT(conv_output_mem_config.shard_spec.has_value());
     const auto& shard_spec = conv_output_mem_config.shard_spec.value();
     const auto& shard_shape = shard_spec.shape;
@@ -179,6 +179,7 @@ tt::tt_metal::OptimizedConvParallelizationConfig determine_conv_op_parallel_conf
     return {
         .grid_size = shard_spec.grid.bounding_box().grid_size(),
         .num_cores_nhw = num_cores_nhw,
+        .num_cores_c = num_cores_c,
         .per_core_out_matrix_height_ntiles = shard_shape[0] / 32,
         .per_core_out_matrix_width_ntiles = shard_shape[1] / 32,
     };
@@ -603,7 +604,8 @@ std::tuple<ttnn::Tensor, uint32_t, uint32_t, ttnn::Tensor, std::optional<ttnn::T
     auto conv_out_memory_config = create_sharded_memory_config_from_parallel_config(
         Shape({1, 1, batch_size * output_height * output_width, round_up(out_channels, 32)}), parallel_config, 32);
     auto opt_conv_op_parallel_config = determine_conv_op_parallel_config_from_conv_output_mem_config(
-        conv_out_memory_config, get_num_cores_nhw_from_parallel_config(parallel_config));
+        conv_out_memory_config, get_num_cores_nhw_from_parallel_config(parallel_config),
+        get_num_cores_channels_from_parallel_config(parallel_config));
     auto opt_conv_op_block_config = determine_per_core_conv_block_config(
         parallel_config,
         opt_conv_op_parallel_config,
