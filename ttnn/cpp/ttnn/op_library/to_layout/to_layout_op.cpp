@@ -57,9 +57,16 @@ inline bool use_multicore_device_untilize(
     uint32_t ntiles_per_block = input.get_legacy_shape()[-1] / TILE_WIDTH;
     uint32_t nblocks = ceil((float)ntiles / ntiles_per_block);
 
+    if(nblocks == 0)
+        return false;
+
+
     auto grid_size = device->compute_with_storage_grid_size();
     auto [ncores, all_cores, core_range, core_range_cliff, nblocks_per_core, nblocks_per_core_cliff] =
         tt::tt_metal::split_blocks_for_tilize(grid_size, nblocks);
+
+    if(nblocks_per_core == 0)
+        return false;
 
     if (src_sharded) {
         auto shard_spec = input.shard_spec().value();
