@@ -18,6 +18,7 @@
 #include "tt_metal/jit_build/genfiles.hpp"
 #include "tt_metal/llrt/llrt.hpp"
 #include "tt_metal/third_party/tracy/public/tracy/Tracy.hpp"
+#include "tt_metal/graph_tracking.hpp"
 
 namespace tt::tt_metal {
 
@@ -449,6 +450,7 @@ void Program::allocate_circular_buffers() {
                         // `core_range` but also intersecting `cb_allocator.core_range`
                         continue;
                     }
+                    GraphTracker::instance().track_allocate_cb(core_range, computed_addr, circular_buffer->size());
                     cb_allocator.mark_address(computed_addr, circular_buffer->size());
                 }
             }

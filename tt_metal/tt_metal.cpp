@@ -21,6 +21,7 @@
 #include "tt_metal/impl/trace/trace.hpp"
 #include "tt_metal/third_party/tracy/public/tracy/Tracy.hpp"
 
+#include "tt_metal/graph_tracking.hpp"
 namespace tt {
 
 namespace tt_metal {
@@ -689,10 +690,12 @@ void CompileProgram(Device *device, Program &program) {
 }
 
 void AllocateBuffer(Buffer *buffer, bool bottom_up) {
+    GraphTracker::instance().track_allocate(buffer, buffer->size(), bottom_up);
     EnqueueAllocateBuffer(buffer->device()->command_queue(), buffer, bottom_up, false);
 }
 
 void DeallocateBuffer(Buffer *buffer) {
+    GraphTracker::instance().track_deallocate(buffer);
     EnqueueDeallocateBuffer(
         buffer->device()->command_queue(),
         *(buffer->device()->allocator_),

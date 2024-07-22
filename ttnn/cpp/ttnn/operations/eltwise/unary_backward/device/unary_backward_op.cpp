@@ -18,6 +18,7 @@
 #include "ttnn/operations/data_movement/permute/permute.hpp"
 #include "ttnn/operations/data_movement/slice/slice.hpp"
 
+
 namespace ttnn::operations::unary_backward {
 
 std::vector<ttnn::Tensor> _mul_bw(
@@ -599,6 +600,7 @@ std::vector<Tensor> _atan_bw(const Tensor& grad, const Tensor& input, const Memo
     grad_tensor.emplace_back(grad_a);
     return grad_tensor;
 }
+
 
 std::vector<Tensor> _rad2deg_bw(const Tensor& grad, const Tensor& input, const MemoryConfig& output_mem_config) {
     std::vector<Tensor> grad_tensor;

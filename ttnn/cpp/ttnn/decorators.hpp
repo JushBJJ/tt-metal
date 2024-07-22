@@ -9,6 +9,7 @@
 #include "ttnn/experimental/tt_dnn/op_library/run_operation.hpp"
 
 #include "tt_metal/third_party/tracy/public/tracy/Tracy.hpp"
+#include "tt_metal/graph_tracking.hpp"
 
 namespace ttnn {
 namespace decorators {
@@ -193,7 +194,6 @@ struct operation_t {
         ZoneScopedN("Run ttnn operation (struct-based)");
         ZoneName(this->cpp_fully_qualified_name, std::strlen(this->cpp_fully_qualified_name));
         tt::log_debug(tt::LogOp, "Started   C++ ttnn operation: {}", this->cpp_fully_qualified_name);
-
         // #8479: Fix and re-enable logging in cpp operation decorator
         // detail::log("Arguments: ", std::forward<args_t>(args)...);
 
@@ -205,6 +205,14 @@ struct operation_t {
         if constexpr (detail::has_execute_on_worker_thread<concrete_operation_t, args_t&&...>()) {
             using execute_on_worker_thread_return_t =
                 detail::execute_on_worker_thread_return_t<concrete_operation_t, args_t&&...>;
+            GraphTracker::instance().track_begin_op<execute_on_worker_thread_return_t, args_t...>(this->cpp_fully_qualified_name);
+
+            struct scope_exit_t {
+                ~scope_exit_t() {
+                    GraphTracker::instance().track_end_op();
+                }
+            } scope_exit;
+
             const Tensors input_tensors = detail::extract_args_to_vector<ttnn::Tensor>(std::forward<args_t>(args)...);
             const OptionalConstTensors optional_input_tensors =
                 detail::extract_args_to_vector<std::optional<const ttnn::Tensor>>(std::forward<args_t>(args)...);
