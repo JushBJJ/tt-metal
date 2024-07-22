@@ -131,10 +131,6 @@ inline const std::vector<CoreCoord> &get_logical_dispatch_cores(chip_id_t device
     return logical_dispatch_cores;
 }
 
-inline const CoreType get_dispatch_core_type(chip_id_t device_id, const uint8_t num_hw_cqs) {
-    return CoreType::WORKER;
-}
-
 /// @brief Get physical core coordinate from a logical location (device ID + core coordinate)
 /// @param logical_location tt_cxy_pair describing chip and logical location core coordinate
 /// @param core_type CoreType of core to translate

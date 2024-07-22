@@ -88,7 +88,7 @@ class dispatch_core_manager {
         static std::unordered_map<uint8_t, std::unique_ptr<dispatch_core_manager>> dispatch_core_managers;
         if (dispatch_core_managers[num_hw_cqs] == nullptr) {
             // Need to do this since dispatch_core_manager constructor is private
-            dispatch_core_managers[num_hw_cqs] = std::unique_ptr<dispatch_core_manager>(new dispatch_core_manager(num_hw_cqs));
+            dispatch_core_managers[num_hw_cqs] = std::unique_ptr<dispatch_core_manager>(new dispatch_core_manager(num_hw_cqs, dispatch_core_type));
         }
         return *dispatch_core_managers[num_hw_cqs];
     }
@@ -353,10 +353,9 @@ class dispatch_core_manager {
     /// @brief dispatch_core_manager constructor initializes a list of cores per device that are designated for any dispatch functionality
     ///         This list contains dispatch cores that have not been assigned to a particular dispatch function
     /// @param num_hw_cqs is used to get the correct collection of dispatch cores for a particular device
-    dispatch_core_manager(uint8_t num_hw_cqs) {
+    dispatch_core_manager(uint8_t num_hw_cqs, CoreType dispatch_core_type) {
         for (chip_id_t device_id = 0; device_id < tt::Cluster::instance().number_of_devices(); device_id++) {
             std::list<CoreCoord> &logical_dispatch_cores = this->available_dispatch_cores_by_device[device_id];
-            auto dispatch_core_type = tt::get_dispatch_core_type(device_id, num_hw_cqs);
             for (const CoreCoord &logical_dispatch_core : tt::get_logical_dispatch_cores(device_id, num_hw_cqs, dispatch_core_type)) {
                 logical_dispatch_cores.push_back(logical_dispatch_core);
             }

@@ -1103,6 +1103,7 @@ void Device::setup_tunnel_for_remote_devices() {
             uint8_t num_hw_cqs = this->num_hw_cqs_;
             uint16_t channel = tt::Cluster::instance().get_assigned_channel_for_device(device_id);
             CoreType dispatch_core_type = dispatch_core_manager::get(num_hw_cqs).get_dispatch_core_type(mmio_device_id);
+            std::cout << " dispatch core type " << (uint32_t)dispatch_core_type << std::endl;
 
             dispatch_worker_build_settings_t settings = {};
             //allocations below are on mmio chip.

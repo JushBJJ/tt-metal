@@ -332,11 +332,11 @@ void DumpDeviceProfileResults(Device *device, std::vector<CoreCoord> &worker_cor
 #if defined(TRACY_ENABLE)
     ZoneScoped;
 
+    auto& dispatch_core_type = device->dispatch_core_type();
     if (tt::llrt::OptionsG.get_profiler_do_dispatch_cores()) {
         auto device_id = device->id();
         auto device_num_hw_cqs = device->num_hw_cqs();
         for (const CoreCoord& core : tt::get_logical_dispatch_cores(device_id, device_num_hw_cqs)) {
-            CoreType dispatch_core_type = tt::get_dispatch_core_type(device_id, device_num_hw_cqs);
             const auto curr_core = device->physical_core_from_logical_core(core, dispatch_core_type);
             worker_cores.push_back(curr_core);
         }
@@ -381,7 +381,6 @@ void DumpDeviceProfileResults(Device *device, std::vector<CoreCoord> &worker_cor
                     }
                     for (const CoreCoord& core : tt::get_logical_dispatch_cores(device_id, device_num_hw_cqs))
                     {
-                        CoreType dispatch_core_type = tt::get_dispatch_core_type(device_id, device_num_hw_cqs);
                         const auto curr_core = device->physical_core_from_logical_core(core, dispatch_core_type);
                         vector<std::uint32_t> control_buffer = tt::llrt::read_hex_vec_from_core(
                                 device_id,
