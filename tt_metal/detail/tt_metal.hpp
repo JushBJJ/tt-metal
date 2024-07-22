@@ -27,7 +27,20 @@ namespace tt::tt_metal{
 
     namespace detail {
 
+        inline bool bypassDispatchCheck = false;
+
+        inline static void BypassDispatchCheck (){
+            bypassDispatchCheck = true;
+        }
+
+        inline static void DoDispatchCheck (){
+            bypassDispatchCheck = false;
+        }
+
         inline static bool DispatchStateCheck( bool isFastDispatch){
+            if (bypassDispatchCheck) {
+                return false;
+            }
             static bool fd = isFastDispatch;
             TT_FATAL( fd == isFastDispatch, "Mixing fast and slow dispatch is prohibited!" );
             return fd;
