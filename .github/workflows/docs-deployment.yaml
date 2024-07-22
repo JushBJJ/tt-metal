@@ -18,7 +18,7 @@ jobs:
         arch: [grayskull]
     env:
       TT_METAL_ENV: ${{ vars.TT_METAL_ENV }}
-      DOCS_VERSION: ${{ GITHUB_REF_NAME }}
+      DOCS_VERSION: ${{ github.ref_name  }}
       ARCH_NAME: ${{ matrix.arch }}
       LOGURU_LEVEL: INFO
       LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
