@@ -34,7 +34,7 @@ struct DeviceInfo {
 
 DeviceInfo get_device_info(const Device &device) {
     DeviceInfo info{};
-    const auto descriptor = tt::get_core_descriptor_config(device.id(), device.num_hw_cqs());
+    const auto descriptor = tt::get_core_descriptor_config(device.id(), device.num_hw_cqs(), device.dispatch_core_type());
     info.num_y_cores = device.logical_grid_size().y;
     info.num_x_cores = device.logical_grid_size().x;
     info.num_y_compute_cores = descriptor.compute_grid_size.y;

@@ -101,6 +101,8 @@ class Device {
     CoreCoord dram_core_from_logical_core(const CoreCoord &logical_core) const;
     std::vector<CoreCoord> dram_cores_from_logical_cores(const std::vector<CoreCoord> &logical_cores) const;
 
+    CoreType dispatch_core_type() const { return dispatch_core_type_; }
+
     // Ethernet API
     CoreCoord ethernet_core_from_logical_core(const CoreCoord &logical_core) const;
     CoreCoord logical_core_from_ethernet_core(const CoreCoord &physical_core) const;
@@ -307,6 +309,7 @@ class Device {
    uint32_t trace_buffers_size = 0;
    void update_dispatch_cores_for_multi_cq_eth_dispatch();
    private:
+    CoreType dispatch_core_type_ = CoreType::ETH; // TODO: fix this
     std::unordered_map<uint32_t, std::shared_ptr<TraceBuffer>> trace_buffer_pool_;
 };
 

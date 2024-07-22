@@ -41,12 +41,13 @@ protected:
         auto num_cqs_str = getenv("TT_METAL_NUM_HW_CQS");
         int num_cqs = (num_cqs_str != nullptr)? std::stoi(num_cqs_str) : 1;
         std::map<CoreType, std::unordered_set<CoreCoord>> disabled;
-        for (unsigned int id = 0; id < tt::tt_metal::GetNumAvailableDevices(); id++) {
+        for (const auto &dev: this->devices_) {
             // TODO: Better way to get this info once we've solidified how it will be set.
-            const tt::core_descriptor_t &core_desc = tt::get_core_descriptor_config(id, num_cqs);
-            for (auto core : tt::get_logical_dispatch_cores(id, num_cqs)) {
+            unsigned int id = dev->id();
+            auto dispatch_core_type = dev->dispatch_core_type();
+            for (auto core : tt::get_logical_dispatch_cores(id, num_cqs, dispatch_core_type)) {
                 log_info(tt::LogTest, "Disable dprint on Device {}: {}", id, core);
-                disabled[core_desc.dispatch_core_type].insert(core);
+                disabled[dispatch_core_type].insert(core);
             }
         }
         tt::llrt::OptionsG.set_feature_disabled_cores(tt::llrt::RunTimeDebugFeatureDprint, disabled);

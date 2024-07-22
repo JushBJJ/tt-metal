@@ -356,10 +356,11 @@ class dispatch_core_manager {
     dispatch_core_manager(uint8_t num_hw_cqs) {
         for (chip_id_t device_id = 0; device_id < tt::Cluster::instance().number_of_devices(); device_id++) {
             std::list<CoreCoord> &logical_dispatch_cores = this->available_dispatch_cores_by_device[device_id];
-            for (const CoreCoord &logical_dispatch_core : tt::get_logical_dispatch_cores(device_id, num_hw_cqs)) {
+            auto dispatch_core_type = tt::get_dispatch_core_type(device_id, num_hw_cqs);
+            for (const CoreCoord &logical_dispatch_core : tt::get_logical_dispatch_cores(device_id, num_hw_cqs, dispatch_core_type)) {
                 logical_dispatch_cores.push_back(logical_dispatch_core);
             }
-            this->dispatch_core_type_by_device[device_id] = tt::get_dispatch_core_type(device_id, num_hw_cqs);
+            this->dispatch_core_type_by_device[device_id] = dispatch_core_type;
         }
     }
 
