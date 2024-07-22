@@ -591,6 +591,7 @@ class SystemMemoryManager {
         }
 
         // Also store this data in hugepages, so if a hang happens we can see what was written by host.
+        /*
         chip_id_t mmio_device_id = tt::Cluster::instance().get_associated_mmio_device(this->device_id);
         uint16_t channel = tt::Cluster::instance().get_assigned_channel_for_device(this->device_id);
         tt::Cluster::instance().write_sysmem(
@@ -600,6 +601,7 @@ class SystemMemoryManager {
             mmio_device_id,
             channel
         );
+        */
     }
 
     void completion_queue_wait_front(const uint8_t cq_id, volatile bool &exit_condition) const {
