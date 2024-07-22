@@ -1,7 +1,6 @@
-name: "Release Docs: package the docs and publish to Docs the repo"
+name: "[internal] Release Docs: package the docs and publish to Docs the repo"
 
 on:
-  workflow_dispatch:
   workflow_call:
 
 concurrency:
