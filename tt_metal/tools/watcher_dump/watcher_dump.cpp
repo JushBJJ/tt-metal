@@ -5,7 +5,7 @@
 #include <filesystem>
 #include "tt_metal/host_api.hpp"
 #include "impl/debug/watcher_server.hpp"
-#include "impl/dispatch/command_queue_interface.hpp"
+#include "impl/dispatch/debug_tools.hpp"
 
 using namespace tt;
 using std::cout, std::endl;
@@ -43,7 +43,7 @@ void dump_data(vector<unsigned>& device_ids, bool dump_watcher, bool dump_cqs, b
         if (dump_cqs) {
             std::unique_ptr<SystemMemoryManager> sysmem_manager =
                 std::make_unique<SystemMemoryManager>(id, tt::llrt::OptionsG.get_num_hw_cqs());
-            sysmem_manager->dump_cqs(cq_file, iq_file, dump_cqs_raw_data);
+            internal::dump_cqs(cq_file, iq_file, *sysmem_manager, dump_cqs_raw_data);
         }
         // Watcher attach wthout watcher init - to avoid clearing mailboxes.
         if (dump_watcher)

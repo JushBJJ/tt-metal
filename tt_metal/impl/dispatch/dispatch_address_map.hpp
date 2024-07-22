@@ -14,7 +14,9 @@ static constexpr uint32_t PCIE_ALIGNMENT = NOC_PCIE_READ_ALIGNMENT_BYTES >= NOC_
 
 // Command queue pointers
 constexpr static uint32_t CQ_PREFETCH_Q_RD_PTR = L1_UNRESERVED_BASE;
-constexpr static uint32_t CQ_PREFETCH_Q_PCIE_RD_PTR = CQ_PREFETCH_Q_RD_PTR + sizeof(uint32_t); // Used to notify host of how far device has gotten.
+// Used to notify host of how far device has gotten, doesn't need L1 alignment because it's only written locally by
+// prefetch kernel.
+constexpr static uint32_t CQ_PREFETCH_Q_PCIE_RD_PTR = CQ_PREFETCH_Q_RD_PTR + sizeof(uint32_t);
 constexpr static uint32_t CQ_COMPLETION_WRITE_PTR = CQ_PREFETCH_Q_RD_PTR + L1_ALIGNMENT;
 constexpr static uint32_t CQ_COMPLETION_READ_PTR = CQ_COMPLETION_WRITE_PTR + L1_ALIGNMENT;
 // Max of 2 CQs. CQ0_COMPLETION_LAST_EVENT and CQ1_COMPLETION_LAST_EVENT track the last completed event in the respective CQs
