@@ -15,7 +15,7 @@ using std::vector;
 string output_dir_name = "generated/watcher/";
 string logfile_name = "cq_dump.txt";
 
-void dump_data(vector<unsigned>& device_ids, bool dump_watcher, bool dump_cqs, bool dump_cqs_raw_data) {
+void dump_data(vector<unsigned>& device_ids, bool dump_watcher, bool dump_cqs, bool dump_cqs_raw_data, int num_hw_cqs) {
     // Don't clear L1, this way we can dump the state.
     llrt::OptionsG.set_clear_l1(false);
 
@@ -39,10 +39,10 @@ void dump_data(vector<unsigned>& device_ids, bool dump_watcher, bool dump_cqs, b
         string iq_fname = cq_dir.string() + fmt::format("device_{}_issue_q.txt", id);
         std::ofstream iq_file = std::ofstream(iq_fname);
         // Minimal setup, since we'll be attaching to a potentially hanging chip.
-        auto* device = tt::tt_metal::CreateDeviceMinimal(id, llrt::OptionsG.get_num_hw_cqs());
+        auto* device = tt::tt_metal::CreateDeviceMinimal(id, num_hw_cqs);
         if (dump_cqs) {
             std::unique_ptr<SystemMemoryManager> sysmem_manager =
-                std::make_unique<SystemMemoryManager>(id, tt::llrt::OptionsG.get_num_hw_cqs());
+                std::make_unique<SystemMemoryManager>(id, num_hw_cqs);
             internal::dump_cqs(cq_file, iq_file, *sysmem_manager, dump_cqs_raw_data);
         }
         // Watcher attach wthout watcher init - to avoid clearing mailboxes.
@@ -59,15 +59,16 @@ void dump_data(vector<unsigned>& device_ids, bool dump_watcher, bool dump_cqs, b
 
 void print_usage(const char* exec_name) {
     cout << "Usage: " << exec_name << " [OPTION]" << endl;
+    cout << "\t-h, --help: Display this message." << endl;
     cout << "\t-d=LIST, --devices=LIST: Device IDs of chips to dump, LIST is comma separated list (\"0,2,3\") or "
             "\"all\"."
          << endl;
-    cout << "\t-h, --help: Display this message." << endl;
+    couf << "\t-n=INT, --num-hw-cqs=INT: Number of CQs, should match the original program." << endl;
+    cout << "\t-c, --dump-cqs: Dump Command Queue data." << endl;
+    cout << "\t--dump-cqs-data: Dump Command Queue raw data (bytes), this can take minutes per CQ." << endl;
     cout << "\t-w, --dump-watcher: Dump watcher data, available data depends on whether watcher was enabled for "
             "original program."
          << endl;
-    cout << "\t-c, --dump-cqs: Dump Command Queue data." << endl;
-    cout << "\t--dump-cqs-data: Dump Command Queue raw data (bytes), this can take minutes per CQ." << endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -81,6 +82,7 @@ int main(int argc, char* argv[]) {
 
     // Go through user args, handle accordingly.
     bool dump_watcher = false, dump_cqs = false, dump_cqs_raw_data = false;
+    int num_hw_cqs = 1;
     for (int idx = 1; idx < argc; idx++) {
         string s(argv[idx]);
         if (s == "-h" || s == "--help") {
@@ -105,6 +107,9 @@ int main(int argc, char* argv[]) {
                 }
                 device_ids.push_back(stoi(item));
             }
+        } else if ((s.rfind("-n=", 0) == 0) || (s.rfind("--num-hw-cqs==", 0) == 0)) {
+            string value_str = s.substr(s.find("=") + 1);
+            num_hw_cqs = stoi(value_str.c_str())
         } else if (s == "-w" || s == "--dump-watcher") {
             dump_watcher = true;
         } else if (s == "-c" || s == "--dump-cqs") {
@@ -119,6 +124,6 @@ int main(int argc, char* argv[]) {
     }
 
     // Call dump function with user config.
-    dump_data(device_ids, dump_watcher, dump_cqs, dump_cqs_raw_data);
+    dump_data(device_ids, dump_watcher, dump_cqs, dump_cqs_raw_data, num_hw_cqs);
     cout << "Watcher dump tool finished." << endl;
 }

@@ -2251,8 +2251,6 @@ void HWCommandQueue::read_completion_queue() {
                                 channel);
                             uint32_t event_completed =
                                 dispatch_cmd_and_event.at(sizeof(CQDispatchCmd) / sizeof(uint32_t));
-                            CQDispatchCmd *cmd = (CQDispatchCmd *) dispatch_cmd_and_event.data();
-                            CQDispatchCmdId cmd_id = cmd->base.cmd_id;
 
                             TT_ASSERT(
                                 event_completed == read_descriptor.event_id,
