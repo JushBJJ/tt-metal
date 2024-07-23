@@ -31,8 +31,8 @@ operation::ProgramWithCallbacks create_program(
     uint32_t per_core_M, uint32_t per_core_N,
     const Tensor& in0, const Tensor& in1, const Tensor& output,
     tt::DataFormat in0_data_format, tt::DataFormat in1_data_format, tt::DataFormat output_data_format,
-    bool untilize_out
-
+    bool untilize_out,
+    bool disable_stagger
 ) {
     tt_metal::Program program{};
 
@@ -206,7 +206,11 @@ operation::ProgramWithCallbacks create_program(
     // This is done to mitigate di/dt issues.
     // See issue #9857.
     if (device->arch() == ARCH::WORMHOLE_B0 && num_cores > WH_B0_MM_MAX_CORES_NO_STAGGER) {
-        mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        if (std::getenv("DISABLE_MATMUL_STAGGER") != nullptr || disable_stagger) {
+            log_warning(LogOp, "Stagger disabled for matmul op.");
+        } else {
+            mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        }
     }
 
     // Create compute kernel
@@ -452,7 +456,7 @@ namespace tt {
 namespace tt_metal {
 
 
-operation::ProgramWithCallbacks matmul_multi_core_reuse_optimized_(const Tensor &a, const Tensor &b, Tensor& output, bool bcast_batch, CoreCoord compute_with_storage_grid_size, tt::tt_metal::DataType output_dtype, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool untilize_out) {
+operation::ProgramWithCallbacks matmul_multi_core_reuse_optimized_(const Tensor &a, const Tensor &b, Tensor& output, bool bcast_batch, CoreCoord compute_with_storage_grid_size, tt::tt_metal::DataType output_dtype, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool untilize_out, bool disable_stagger) {
 
 
     const auto& ashape = a.get_legacy_shape();
@@ -543,13 +547,14 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_optimized_(const Tensor 
         per_core_M, per_core_N,
         a, b, output,
         in0_data_format, in1_data_format, output_data_format,
-        untilize_out
+        untilize_out,
+        disable_stagger
     );
 }
 
 // TODO: Get rid of no-op reshapes when we generalize
 // matmul_multi_core_reuse_optimized_bert_large not used
-operation::ProgramWithCallbacks bmm_multi_core_reuse_optimized(const Tensor& a, const Tensor& b,  Tensor& output, bool bcast_batch, CoreCoord compute_with_storage_grid_size, tt::tt_metal::DataType output_dtype, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool untilize_out) {
+operation::ProgramWithCallbacks bmm_multi_core_reuse_optimized(const Tensor& a, const Tensor& b,  Tensor& output, bool bcast_batch, CoreCoord compute_with_storage_grid_size, tt::tt_metal::DataType output_dtype, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool untilize_out, bool disable_stagger) {
     /*
      * For pre-softmax and post-softmax bmm, do an additional no-op reshape by changing cshape and ashape
      * - pre-softmax: [9, 16, 384, 64] x [9, 16, 64, 384] = ([9, 16, 384, 384] -> [9, 1, 6144, 384])
@@ -557,7 +562,7 @@ operation::ProgramWithCallbacks bmm_multi_core_reuse_optimized(const Tensor& a, 
      * NOTE: Only need to pass in the right cshape and ashape for these no-op reshapes.
      * The actual bmm op works on [9, 16, 384, 64] x [9, 16, 64, 384] and [9, 16, 384, 384] x [9, 16, 384, 64].
     */
-    return matmul_multi_core_reuse_optimized_(a, b, output, bcast_batch, compute_with_storage_grid_size, output_dtype, compute_kernel_config, in0_block_w, out_subblock_h, out_subblock_w, per_core_M, per_core_N, fuse_batch, untilize_out);
+    return matmul_multi_core_reuse_optimized_(a, b, output, bcast_batch, compute_with_storage_grid_size, output_dtype, compute_kernel_config, in0_block_w, out_subblock_h, out_subblock_w, per_core_M, per_core_N, fuse_batch, untilize_out, disable_stagger);
 }
 
 }  // namespace tt_metal

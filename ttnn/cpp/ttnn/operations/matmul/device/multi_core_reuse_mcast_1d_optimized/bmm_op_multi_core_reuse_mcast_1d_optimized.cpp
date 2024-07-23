@@ -55,7 +55,8 @@ operation::ProgramWithCallbacks create_program_mcast_in0(
     tt::DataFormat output_data_format,
     bool in0_is_sharded,
     bool output_is_sharded,
-    bool untilize_out) {
+    bool untilize_out,
+    bool disable_stagger) {
     tt_metal::Program program{};
 
     uint32_t num_blocks = K / in0_block_w;
@@ -346,7 +347,11 @@ operation::ProgramWithCallbacks create_program_mcast_in0(
     // This is done to mitigate di/dt issues.
     // See issue #9857.
     if (device->arch() == ARCH::WORMHOLE_B0 && num_cores > WH_B0_MM_MAX_CORES_NO_STAGGER) {
-        mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        if (std::getenv("DISABLE_MATMUL_STAGGER") != nullptr || disable_stagger) {
+            log_warning(LogOp, "Stagger disabled for matmul 1D op.");
+        } else {
+            mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        }
     }
 
     if (output_is_sharded) {
@@ -829,7 +834,8 @@ operation::ProgramWithCallbacks create_program_mcast_in1(
     tt::DataFormat output_data_format,
     bool in0_is_sharded,
     bool output_is_sharded,
-    bool untilize_out) {
+    bool untilize_out,
+    bool disable_stagger) {
     tt_metal::Program program{};
 
     uint32_t num_blocks = K / in0_block_w;
@@ -1065,7 +1071,11 @@ operation::ProgramWithCallbacks create_program_mcast_in1(
     // This is done to mitigate di/dt issues.
     // See issue #9857.
     if (device->arch() == ARCH::WORMHOLE_B0 && num_cores > WH_B0_MM_MAX_CORES_NO_STAGGER) {
-        mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        if (std::getenv("DISABLE_MATMUL_STAGGER") != nullptr || disable_stagger) {
+            log_warning(LogOp, "Stagger disabled for matmul 1D op.");
+        } else {
+            mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        }
     }
 
     if (in0_is_sharded) {
@@ -1503,7 +1513,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized_(
     bool fuse_batch,
     std::optional<UnaryWithParam> fused_activation,
     bool mcast_in0,
-    bool untilize_out) {
+    bool untilize_out,
+    bool disable_stagger) {
     const auto &ashape = a.get_legacy_shape(), bshape = b.get_legacy_shape();
 
     // CB dataformats
@@ -1645,7 +1656,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized_(
             output_data_format,
             a.memory_config().is_sharded(),
             output.memory_config().is_sharded(),
-            untilize_out);
+            untilize_out,
+            disable_stagger);
     } else {
         return reuse_mcast_1d_optimized_helpers::create_program_mcast_in1(
             device,
@@ -1675,7 +1687,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized_(
             output_data_format,
             a.memory_config().is_sharded(),
             output.memory_config().is_sharded(),
-            untilize_out);
+            untilize_out,
+            disable_stagger);
     }
 }
 
@@ -1695,7 +1708,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized(
     bool fuse_batch,
     std::optional<UnaryWithParam> fused_activation,
     bool mcast_in0,
-    bool untilize_out) {
+    bool untilize_out,
+    bool disable_stagger) {
     return matmul_multi_core_reuse_mcast_1d_optimized_(
         a,
         b,
@@ -1712,7 +1726,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized(
         fuse_batch,
         fused_activation,
         mcast_in0,
-        untilize_out);
+        untilize_out,
+        disable_stagger);
 }
 
 }  // namespace tt_metal

@@ -352,7 +352,8 @@ operation::ProgramWithCallbacks create_program_dram_sharded(
     bool untilize_out,
     bool skip_compute,
     bool skip_in0_mcast,
-    bool skip_write_back) {
+    bool skip_write_back,
+    bool disable_stagger) {
     log_debug("math_fidelity: {}", math_fidelity);
     log_debug("fp32_dest_acc_en: {}", fp32_dest_acc_en);
     log_debug("math_approx_mode: {}", math_approx_mode);
@@ -642,7 +643,11 @@ operation::ProgramWithCallbacks create_program_dram_sharded(
     // This is done to mitigate di/dt issues.
     // See issue #9857.
     if (device->arch() == ARCH::WORMHOLE_B0 && all_cores_in_rect_grid_vec.size() > WH_B0_MM_MAX_CORES_NO_STAGGER) {
-        mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        if (std::getenv("DISABLE_MATMUL_STAGGER") != nullptr || disable_stagger) {
+            log_warning(LogOp, "Stagger disabled for matmul dram sharded op.");
+        } else {
+            mm_kernel_defines["MM_STAGGER_ODD_ROWS"] = "1";
+        }
     }
 
     auto mm_kernel_in0_sender_id = tt_metal::CreateKernel(
@@ -1133,7 +1138,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized_(
     bool untilize_out,
     bool skip_compute,
     bool skip_in0_mcast,
-    bool skip_write_back) {
+    bool skip_write_back,
+    bool disable_stagger) {
     const auto &ashape = a.get_legacy_shape(), bshape = b.get_legacy_shape();
 
     // CB dataformats
@@ -1247,7 +1253,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized_(
         untilize_out,
         skip_compute,
         skip_in0_mcast,
-        skip_write_back);
+        skip_write_back,
+        disable_stagger);
 }
 
 operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized(
@@ -1263,7 +1270,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized(
     bool untilize_out,
     bool skip_compute,
     bool skip_in0_mcast,
-    bool skip_write_back) {
+    bool skip_write_back,
+    bool disable_stagger) {
     return matmul_multi_core_reuse_dram_sharded_optimized_(
         a,
         b,
@@ -1277,7 +1285,8 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized(
         untilize_out,
         skip_compute,
         skip_in0_mcast,
-        skip_write_back);
+        skip_write_back,
+        disable_stagger);
 }
 
 }  // namespace tt_metal
