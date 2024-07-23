@@ -35,6 +35,8 @@
 #include "ttnn/operations/eltwise/complex_unary_backward/complex_unary_backward_pybind.hpp"
 #include "ttnn/operations/eltwise/complex_binary_backward/complex_binary_backward_pybind.hpp"
 #include "ttnn/operations/experimental/experimental_pybind.hpp"
+#include "ttnn/operations/memory/memory_pybind.hpp"
+
 
 namespace py = pybind11;
 
@@ -77,6 +79,9 @@ void py_module(py::module& module) {
 
     auto m_core = module.def_submodule("core", "core operations");
     core::py_module(m_core);
+
+    auto memory = module.def_submodule("memory", "read/write from Memory");
+    memory::py_module(memory);
 
     auto m_creation = module.def_submodule("creation", "creation operations");
     creation::py_module(m_creation);

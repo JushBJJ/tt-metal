@@ -229,6 +229,10 @@ tt::tt_metal::OptimizedConvBlockConfig determine_per_core_conv_block_config(
     uint32_t act_block_w = parallel_config.shard_scheme == TensorMemoryLayout::HEIGHT_SHARDED
                                ? round_up(padded_in_channels * window_w, 32)
                                : padded_in_channels;
+    if(parallel_config.shard_scheme == TensorMemoryLayout::WIDTH_SHARDED)
+    {
+        act_block_w = (padded_in_channels*window_w*window_w)/parallel_config.grid.num_cores();
+    }
     TT_ASSERT(act_block_w % 32 == 0);
     uint32_t act_block_w_ntiles = act_block_w / 32;
     uint32_t act_c_num_blocks = parallel_config.shard_scheme == TensorMemoryLayout::HEIGHT_SHARDED ? 1

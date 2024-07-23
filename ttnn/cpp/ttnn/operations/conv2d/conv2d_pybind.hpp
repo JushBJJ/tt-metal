@@ -111,6 +111,8 @@ void py_module(py::module& module) {
     )doc");
 
     module.def(
+        "get_conv_padded_input_shape_and_mem_config",
+        [](ttnn::Device& device,
             const ttnn::Tensor& input_tensor,
             const Conv2dConfig& conv_config,
             uint32_t batch_size,

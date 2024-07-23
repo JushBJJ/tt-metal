@@ -739,6 +739,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_sharded_v2_impl(
         log_debug(LogOp, "split readers: {}", split_reader);
         log_debug(LogOp, "conv_act_size_h: {}", conv_act_size_h);
         log_debug(LogOp, "conv_act_size_w: {}", conv_act_size_w);
+        log_debug(LogOp, "conv_act_c_blocks: {}", conv_act_c_blocks);
         log_debug(LogOp, "act_matrix_height: {}", act_matrix_height);
         log_debug(LogOp, "act_matrix_width: {}", act_matrix_width);
         log_debug(LogOp, "act_matrix_height_unpadded: {}", act_matrix_height_unpadded);

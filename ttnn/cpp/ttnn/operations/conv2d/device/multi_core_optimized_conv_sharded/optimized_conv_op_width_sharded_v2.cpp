@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "tensor/tensor_utils.hpp"
-#include "tt_dnn/op_library/auto_format.hpp"
+#include "ttnn/experimental/tt_dnn/op_library/auto_format.hpp"
 #include "ttnn/operations/conv2d/device/optimized_conv_op.hpp"
-#include "tt_dnn/op_library/eltwise_unary/eltwise_unary_op.hpp"
-#include "tt_dnn/op_library/sharding_utilities.hpp"
-#include "tt_dnn/op_library/sliding_window_op_infra/sliding_window.hpp"
-#include "tt_dnn/op_library/work_split.hpp"
+#include "ttnn/experimental/tt_dnn/op_library/sharding_utilities.hpp"
+#include "ttnn/experimental/tt_dnn/op_library/sliding_window_op_infra/sliding_window.hpp"
+#include "ttnn/experimental/tt_dnn/op_library/work_split.hpp"
+#include "ttnn/operations/eltwise/unary/device/unary_op.hpp"
 #include "tt_metal/common/constants.hpp"
 #include "tt_metal/detail/tt_metal.hpp"
 #include "tt_metal/detail/util.hpp"
@@ -238,6 +238,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     bool enable_split_reader,
     bool enable_subblock_padding) {
     bool pass = true;
+    enable_split_reader = false;
     tt_metal::Device* device = a.device();
     TT_ASSERT(a.get_layout() == Layout::ROW_MAJOR, "Conv activation should be in row major layout");
     TT_ASSERT(a.memory_config().is_sharded(), "Conv activation must be sharded.");
@@ -488,10 +489,15 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     log_debug(LogOp, "act_block_h_datums_split_last: {}", act_block_h_datums_split_last);
     log_debug(LogOp, "act_block_num_tiles_split: {}", act_block_num_tiles_split);
     log_debug(LogOp, "act_block_num_tiles_split_last: {}", act_block_num_tiles_split_last);
+    log_debug(LogOp, "act_block_w_datums: {}", act_block_w_datums);
+    log_debug(LogOp, "conv_act_size_c: {}", conv_act_size_c);
+    log_debug(LogOp, "weight_size_w: {}", weight_size_w);
 
-    TT_ASSERT(
-        (act_block_w_datums == round_up(conv_act_size_c * weight_size_w, TILE_WIDTH)) ||
-        ((act_block_w_datums <= conv_act_size_c) && (conv_act_size_c % act_block_w_datums == 0)));
+    // TT_ASSERT(
+    //     (act_block_w_datums == round_up(conv_act_size_c * weight_size_w, TILE_WIDTH)) ||
+    //     ((act_block_w_datums <= conv_act_size_c)
+    //      && (conv_act_size_c % act_block_w_datums == 0)
+    //      ));
 
     // weight block info
     uint32_t weight_block_w_datums = weight_matrix_width / num_blocks_weight_w;
@@ -589,6 +595,8 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     uint32_t dst_l1_weight_buffer_size_bytes =
         weight_block_h_ntiles * weight_block_w_ntiles * tt::tt_metal::detail::TileSize(weight_df);
 
+    uint32_t conv_act_c_read_bytes = conv_act_size_c * a.element_size() / conv_act_c_blocks;
+
     // log info for debugging opts
     {
         log_debug(LogOp, "grid_size: {}", p_config.grid_size);
@@ -611,6 +619,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         log_debug(LogOp, "split readers: {}", split_reader);
         log_debug(LogOp, "conv_act_size_h: {}", conv_act_size_h);
         log_debug(LogOp, "conv_act_size_w: {}", conv_act_size_w);
+        log_debug(LogOp, "conv_act_c_blocks: {}", conv_act_c_blocks);
         log_debug(LogOp, "act_matrix_height: {}", act_matrix_height);
         log_debug(LogOp, "act_matrix_width: {}", act_matrix_width);
         log_debug(LogOp, "act_matrix_height_unpadded: {}", act_matrix_height_unpadded);
@@ -625,6 +634,8 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         log_debug(LogOp, "num_blocks_weight_w: {}", num_blocks_weight_w);
         log_debug(LogOp, "num_blocks_out_h: {}", num_blocks_out_h);
         log_debug(LogOp, "act_dram_addr: {}", act_dram_addr);
+        log_debug(LogOp, "conv_act_c_blocks: {}",conv_act_c_blocks);
+        log_debug(LogOp, "conv_act_c_read_bytes: {}",conv_act_c_read_bytes);
         log_debug(LogOp, "act_block_h_ntiles: {}", act_block_h_ntiles);
         log_debug(LogOp, "act_block_h_datums: {}", act_block_h_datums);
         log_debug(LogOp, "act_block_w_ntiles: {}", act_block_w_ntiles);
@@ -654,7 +665,95 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         log_debug(LogOp, "packer_l1_acc: {}", packer_l1_acc);
     }
 
-    CoreRange all_cores(CoreCoord(0, 0), CoreCoord(pconfig.num_cores_c, 0)); //TODO: Support multiple rows
+    std::set<CoreRange> all_cores;
+    all_cores.insert(CoreRange(CoreCoord(0, 0), CoreCoord(p_config.num_cores_c, 0))); //TODO: Support multiple rows
+
+    std::string compute_kernel_path = "ttnn/cpp/ttnn/operations/conv2d/device/kernels/conv_bmm_tilize_col_major_out_blocks.cpp";
+    std::string activation_kernel_path = "ttnn/cpp/ttnn/operations/conv2d/device/kernels/activation_reader_width_sharded.cpp";
+    std::string weights_kernel_path = "ttnn/cpp/ttnn/operations/conv2d/device/kernels/weights_reader_width_sharded.cpp";
+
+    std::vector<uint32_t> reader_rt_args;
+    std::vector<uint32_t> activation_kernel_compile_args;
+    std::vector<uint32_t> writer_rt_args;
+    std::vector<uint32_t> writer_compile_time_args;
+    std::vector<uint32_t> compute_kernel_args;
+
+    activation_kernel_compile_args = {
+        (uint32_t)0, // Never in DRAM
+        (uint32_t)stride_h,
+        (uint32_t)stride_w,
+        (uint32_t)conv_act_size_w,
+        (uint32_t)conv_output_size_w,  // conv_output_w_last_index
+        (uint32_t)conv_act_c_read_bytes,
+        (uint32_t)weight_size_h, //Input filter window height
+        (uint32_t)weight_size_w, //Input filter window width
+        (uint32_t)(split_reader ? act_block_h_datums_split : act_block_h_datums),
+        (uint32_t)(split_reader ? act_block_num_tiles_split / conv_act_c_blocks : act_block_num_tiles / conv_act_c_blocks),
+        (uint32_t)conv_act_c_blocks
+    };
+
+    // compute_kernel_args = {
+    //     in0_block_w,
+    //     act_num_subblocks,
+    //     in0_block_num_tiles,
+    //     in0_subblock_num_tiles,
+    //     act_subblock_h_ntiles,
+
+    //     weight_num_subblocks,
+    //     in1_block_num_tiles,
+    //     weight_block_w_ntiles,
+
+    //     num_blocks_act_h_per_core,
+    //     in0_num_blocks_w,
+    //     num_blocks_weight_w_per_core,
+
+    //     out_subblock_h_ntiles_padded,
+    //     out_subblock_w_ntiles,
+    //     out_subblock_num_tiles,
+
+    //     tilize_in0,
+    //     untilize_out,
+
+    //     bias_ntiles_per_core
+    // };
+
+    uint32_t act_tile_size = tt_metal::detail::TileSize(act_df);
+    uint32_t num_act_cb_tiles = act_block_h_ntiles * act_block_w_ntiles / conv_act_c_blocks;
+
+    CircularBufferConfig cb_sharded_act_config =
+            CircularBufferConfig(shard_shape[0] * shard_shape[1] * datum_size(act_df), {{sharded_act_cb, act_df}})
+                .set_page_size(sharded_act_cb, shard_shape[1] * datum_size(act_df));
+        cb_sharded_act_config.set_globally_allocated_address(*a.buffer());
+
+    auto cb_sharded_act = tt_metal::CreateCircularBuffer(program, all_cores, cb_sharded_act_config);
+
+    CircularBufferConfig cb_act_row_major_bfloat16_config =
+                CircularBufferConfig(num_act_cb_tiles * act_tile_size, {{act_cb_row_major_bfloat16, act_df}})
+                    .set_page_size(act_cb_row_major_bfloat16, act_tile_size);
+            auto cb_act_row_major_bfloat16 =
+                tt_metal::CreateCircularBuffer(program, all_cores, cb_act_row_major_bfloat16_config);
+
+    CircularBufferConfig cb_output_config =
+        CircularBufferConfig(num_act_cb_tiles * act_tile_size, {{out0_cb, out_df}})
+            .set_page_size(out0_cb, act_tile_size);
+    if (output.is_sharded()) {
+        cb_output_config = cb_output_config.set_globally_allocated_address(*output.buffer());
+    }
+    auto cb_output = tt_metal::CreateCircularBuffer(program, all_cores, cb_output_config);
+
+    log_debug(LogOp, "Act Block CB Address: {}",GetCircularBufferConfig(program,cb_act_row_major_bfloat16).globally_allocated_address());
+
+    auto act_kernel_id = CreateKernel(
+        program,
+        activation_kernel_path,
+        all_cores,
+        DataMovementConfig{
+            .processor = DataMovementProcessor::RISCV_1,
+            .noc = NOC::RISCV_1_default,
+            .compile_args = activation_kernel_compile_args
+        }
+    );
+
 
 
     auto empty_callback = [](
