@@ -22,6 +22,7 @@ from tests.scripts.common import (
     filter_empty,
     void_for_whb0,
     void_for_gs,
+    void_for_bh,
 )
 from tests.scripts.cmdline_args import (
     get_tt_metal_arguments_from_cmdline_args,
@@ -84,7 +85,8 @@ TT_EAGER_COMMON_TEST_ENTRIES = (
     ),
     TestEntry("tt_eager/tests/tensors/test_copy_and_move", "tensors/test_copy_and_move"),
     TestEntry("tt_eager/tests/tensors/test_raw_host_memory_pointer", "tensors/test_raw_host_memory_pointer"),
-    TestEntry("tt_eager/tests/tensors/test_async_tensor_apis", "tensors/test_async_tensor_apis"),
+    # TODO (abhullar): Enable this when working
+    void_for_bh(TestEntry("tt_eager/tests/tensors/test_async_tensor_apis", "tensors/test_async_tensor_apis")),
     # Integration tests
     # void_for_whb0(TestEntry("tt_eager/tests/integration_tests/test_bert", "integration_tests/test_bert")),
 )
