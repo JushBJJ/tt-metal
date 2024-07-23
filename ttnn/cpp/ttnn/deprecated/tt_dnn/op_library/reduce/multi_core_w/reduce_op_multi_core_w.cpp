@@ -18,13 +18,23 @@ namespace tt {
 namespace tt_metal {
 
 operation::ProgramWithCallbacks reduce_multi_core_w(
-    const Tensor &a, Tensor &output, ReduceOpMath reduce_op, float scaler) {
+    const Tensor &a, Tensor &output, ReduceOpMath reduce_op, float scaler,  std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
     const auto shape = a.get_legacy_shape();
     uint32_t W = shape[3], H = shape[2], NC = shape[1] * shape[0];
     uint32_t HW = H * W;
 
     uint32_t Wt = W / TILE_WIDTH;
     uint32_t Ht = H / TILE_HEIGHT;
+
+    bool fp32_dest_acc_en = false;
+    MathFidelity math_fidelity = MathFidelity::HiFi4;
+
+    if (compute_kernel_config.has_value()) {
+        auto kernel_args = get_compute_kernel_config_args(a.device()->arch(), compute_kernel_config.value());
+        fp32_dest_acc_en = std::get<2>(kernel_args);
+        math_fidelity = std::get<0>(kernel_args);
+    }
+    log_info(tt::LogVerif, "has config: {}, fp32: {}, math_fidelity: {}", compute_kernel_config.has_value(), fp32_dest_acc_en, math_fidelity);
 
     tt_metal::Program program = tt_metal::CreateProgram();
 
@@ -100,7 +110,7 @@ operation::ProgramWithCallbacks reduce_multi_core_w(
         program,
         "ttnn/cpp/ttnn/deprecated/tt_dnn/op_library/reduce/kernels/compute/reduce_w.cpp",
         core_group_1,
-        tt_metal::ComputeConfig{.fp32_dest_acc_en = true, .compile_args = compute_kernel_args_group_1, .defines = reduce_defines});
+        tt_metal::ComputeConfig{.math_fidelity = math_fidelity, .fp32_dest_acc_en = fp32_dest_acc_en, .compile_args = compute_kernel_args_group_1, .defines = reduce_defines});
 
     if (!core_group_2.ranges().empty()) {
         vector<uint32_t> compute_kernel_args_group_2 = {
@@ -113,7 +123,7 @@ operation::ProgramWithCallbacks reduce_multi_core_w(
             program,
             "ttnn/cpp/ttnn/deprecated/tt_dnn/op_library/reduce/kernels/compute/reduce_w.cpp",
             core_group_2,
-            tt_metal::ComputeConfig{.fp32_dest_acc_en = true, .compile_args = compute_kernel_args_group_2, .defines = reduce_defines});
+            tt_metal::ComputeConfig{.math_fidelity = math_fidelity, .fp32_dest_acc_en = fp32_dest_acc_en, .compile_args = compute_kernel_args_group_2, .defines = reduce_defines});
     }
 
     uint32_t out_dim_divider = Wt;

@@ -31,7 +31,8 @@ FORCE_INLINE void generate_reduce_scaler(const uint32_t cb_id, const uint32_t sc
         }
     }
 #else
-    for (int i = 0; i < 1024; i++) {
+    noc_async_read_barrier();
+    for (int i = 0; i < 512; i++) {
         ptr[i] = 0x3f803f80;
     }
 #endif

@@ -10,7 +10,19 @@
 #include "compute_kernel_api/matmul.h"
 #endif
 
+#include "debug/dprint.h"
+
 namespace NAMESPACE {
+
+inline void print_full_tile(uint32_t cb_id, uint32_t tile_id = 0, bool untilize = false) {
+    DPRINT << "======" << ENDL();
+    for (int32_t r = 0; r < 32; ++ r) {
+        SliceRange sr = SliceRange{.h0 = r, .h1 = r+1, .hs = 1, .w0 = 0, .w1 = 32, .ws = 1};
+        DPRINT << (uint)r << " " << TileSlice(cb_id, tile_id, sr, true, untilize) << ENDL();
+    }
+    DPRINT << "++++++" << ENDL();
+}
+
 void MAIN {
 
     uint32_t Ht = get_compile_time_arg_val(0);
@@ -23,7 +35,8 @@ void MAIN {
     mm_init(tt::CB::c_in0, tt::CB::c_in2);
 #endif
 
-    cb_wait_front(tt::CB::c_in2, 1); // scaler tile from the reader
+    cb_wait_front(tt::CB::c_in2, 1);  // scaler tile from the reader
+    print_full_tile(tt::CB::c_in2, 0, false);
     for (uint32_t nc = 0; nc < NC; nc++) {
         constexpr int onetile = 1;
         int reduce_dst_idx = 0;
