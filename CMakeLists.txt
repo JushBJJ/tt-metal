@@ -109,10 +109,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     find_library(LIBC++ABI c++abi)
     if(NOT LIBC++ OR NOT LIBC++ABI)
         message(FATAL_ERROR "libc++ or libc++abi not found. Make sure you have libc++ and libc++abi installed and in your PATH")
-    else()
-        message(STATUS "libc++ path: ${LIBC++}")
-        message(STATUS "libc++abi path: ${LIBC++ABI}")
     endif()
+    
     target_link_libraries(stdlib INTERFACE ${LIBC++} ${LIBC++ABI})
     target_compile_options(stdlib INTERFACE -stdlib=libc++)
 else()
@@ -141,9 +139,12 @@ target_compile_options(compiler_flags INTERFACE -mavx2 -fPIC -DFMT_HEADER_ONLY -
 
 if(NOT TT_METAL_VERSIM_DISABLED AND TT_METAL_SIMULATOR_EN)
     message(FATAL_ERROR "Cannot use versim and metal sim at the same time!!.")
-elseif(TT_METAL_VERSIM_DISABLED)
+endif()
+if(TT_METAL_VERSIM_DISABLED)
     target_compile_options(compiler_flags INTERFACE -DTT_METAL_VERSIM_DISABLED)
-elseif(TT_METAL_SIMULATOR_EN)
+endif()
+if(TT_METAL_SIMULATOR_EN)
+    message(STATUS "Enabling vcs simulator")
     target_compile_options(compiler_flags INTERFACE -DTT_METAL_SIMULATOR_EN)
 endif()
 
@@ -163,6 +164,13 @@ foreach(lib ${BoostPackages})
 endforeach()
 if(DEFINED ENV{CONDA_PREFIX})
     target_include_directories(metal_header_directories INTERFACE $ENV{CONDA_PREFIX}/include)
+endif()
+
+if(TT_METAL_SIMULATOR_EN)
+    target_include_directories(metal_header_directories INTERFACE 
+        ${flatbuffers_SOURCE_DIR}/include
+        ${nanomsg_SOURCE_DIR}/include
+    )
 endif()
 
 if ("$ENV{ARCH_NAME}" STREQUAL "wormhole_b0")

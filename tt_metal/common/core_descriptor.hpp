@@ -36,10 +36,13 @@ inline std::string get_core_descriptor_file(const tt::ARCH &arch) {
         wh_arch += getenv("WH_ARCH_YAML");
     }
     bool targeting_versim = false;
+    bool targeting_vcs = false; 
 #ifndef TT_METAL_VERSIM_DISABLED
     targeting_versim = true;
 #endif
-
+#ifdef TT_METAL_SIMULATOR_EN
+    targeting_vcs = true;
+#endif
     if (targeting_versim) {
         switch (arch) {
             case tt::ARCH::Invalid: throw std::runtime_error("Invalid arch not supported"); // will be overwritten in tt_global_state constructor
@@ -48,6 +51,16 @@ inline std::string get_core_descriptor_file(const tt::ARCH &arch) {
             case tt::ARCH::WORMHOLE: throw std::runtime_error("WORMHOLE arch not supported");
             case tt::ARCH::WORMHOLE_B0: return tt_metal_home + "tt_metal/core_descriptors/wormhole_b0_versim_1x1_arch.yaml";
             case tt::ARCH::BLACKHOLE: return tt_metal_home + "tt_metal/core_descriptors/blackhole_versim_1x1_arch.yaml";
+            default: throw std::runtime_error("Unsupported device arch");
+        };
+    } else if (targeting_vcs) {
+        switch (arch) {
+            case tt::ARCH::Invalid: throw std::runtime_error("Invalid arch not supported"); // will be overwritten in tt_global_state constructor
+            case tt::ARCH::JAWBRIDGE: throw std::runtime_error("JAWBRIDGE arch not supported");
+            case tt::ARCH::GRAYSKULL: throw std::runtime_error("GRAYSKULL arch not supported for VCS");
+            case tt::ARCH::WORMHOLE: throw std::runtime_error("WORMHOLE arch not supported for VCS");
+            case tt::ARCH::WORMHOLE_B0: throw std::runtime_error("WORMHOLE_B0 arch not supported for VCS");
+            case tt::ARCH::BLACKHOLE: return tt_metal_home + "tt_metal/core_descriptors/blackhole_simulation_1x2_arch.yaml";
             default: throw std::runtime_error("Unsupported device arch");
         };
     } else {

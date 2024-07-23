@@ -148,8 +148,13 @@ void Cluster::generate_cluster_descriptor() {
     // create-eth-map not available for Blackhole bring up
     if (this->arch_ == tt::ARCH::GRAYSKULL or this->arch_ == tt::ARCH::BLACKHOLE) {
         // Cannot use tt_SiliconDevice::detect_available_device_ids because that returns physical device IDs
-        std::vector<chip_id_t> physical_mmio_device_ids = tt_SiliconDevice::detect_available_device_ids();
+        std::vector<chip_id_t> physical_mmio_device_ids;
         std::set<chip_id_t> logical_mmio_device_ids;
+        if (this->target_type_ == TargetDevice::VCS){
+            physical_mmio_device_ids = tt_SimulationDevice::detect_available_device_ids();
+        } else {
+            physical_mmio_device_ids = tt_SiliconDevice::detect_available_device_ids();
+        }
         for (chip_id_t logical_mmio_device_id = 0; logical_mmio_device_id < physical_mmio_device_ids.size();
              logical_mmio_device_id++) {
             logical_mmio_device_ids.insert(logical_mmio_device_id);
@@ -289,7 +294,7 @@ void Cluster::open_driver(
     } 
 #ifdef TT_METAL_SIMULATOR_EN
     else if (this->target_type_ == TargetDevice::VCS) {
-        device_driver = std::make_unique<tt_SimulationDevice>(sdesc_path, this->cluster_desc_path_);
+        device_driver = std::make_unique<tt_SimulationDevice>(sdesc_path);
     }
 #endif
     device_driver->set_device_dram_address_params(dram_address_params);
@@ -314,7 +319,6 @@ void Cluster::start_driver(chip_id_t mmio_device_id, tt_device_params &device_pa
 }
 
 Cluster::~Cluster() {
-    log_info(tt::LogDevice, "Closing user mode device drivers");
 
     for (const auto &[mmio_device_id, device_driver] : this->mmio_device_id_to_driver_) {
         device_driver->close_device();

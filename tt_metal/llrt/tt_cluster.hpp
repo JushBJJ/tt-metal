@@ -53,8 +53,11 @@ class Cluster {
             return std::count_if(chips.begin(), chips.end(), [&](const auto &id) {
                 return this->cluster_desc_->get_board_type(id) == BoardType::GALAXY;
             });
+        // } else if (this->target_type_ == TargetDevice::VCS) {
+        //     return 1;
         } else {
-            return this->cluster_desc_->get_number_of_chips();
+            // return this->cluster_desc_->get_number_of_chips();
+            return 1;
         }
     }
 
@@ -94,6 +97,9 @@ class Cluster {
         vector<uint32_t> &data, uint32_t sz_in_bytes, tt_cxy_pair core, uint64_t addr, bool small_access = false) const;
 
     std::optional<std::tuple<uint32_t, uint32_t>> get_tlb_data(const tt_cxy_pair &target) const {
+        // if(this->target_type_ == TargetDevice::VCS) {
+        //     return std::make_optional(std::make_tuple(0u, 0u));
+        // }
         chip_id_t mmio_device_id = device_to_mmio_device_.at(target.chip);
         tt_SiliconDevice *device =
             dynamic_cast<tt_SiliconDevice *>(this->mmio_device_id_to_driver_.at(mmio_device_id).get());
@@ -103,6 +109,9 @@ class Cluster {
     }
 
     uint32_t get_m_dma_buf_size(chip_id_t chip_id) const {
+        // if(this->target_type_ == TargetDevice::VCS) {
+        //     return 0;
+        // }
         chip_id_t mmio_device_id = device_to_mmio_device_.at(chip_id);
         tt_SiliconDevice *device =
             dynamic_cast<tt_SiliconDevice *>(this->mmio_device_id_to_driver_.at(mmio_device_id).get());
@@ -111,6 +120,9 @@ class Cluster {
 
     std::function<void(uint32_t, uint32_t, const uint8_t *, uint32_t)> get_fast_pcie_static_tlb_write_callable(
         int chip_id) const {
+        // if(this->target_type_ == TargetDevice::VCS) {
+        //     return [](uint32_t, uint32_t, const uint8_t *, uint32_t) {};
+        // }
         chip_id_t mmio_device_id = device_to_mmio_device_.at(chip_id);
         tt_SiliconDevice *device =
             dynamic_cast<tt_SiliconDevice *>(this->mmio_device_id_to_driver_.at(mmio_device_id).get());
@@ -120,6 +132,11 @@ class Cluster {
     // Returns a writer object which holds a pointer to a static tlb
     // Allows for fast writes when targeting same device core by only doing the lookup once and avoiding repeated stack traversals
     tt::Writer get_static_tlb_writer(tt_cxy_pair target) const {
+        // if(this->target_type_ == TargetDevice::VCS) {
+        //     chip_id_t mmio_device_id = device_to_mmio_device_.at(target.chip);
+        //     tt_SimulationDevice* device = dynamic_cast<tt_SimulationDevice*>(this->mmio_device_id_to_driver_.at(mmio_device_id).get());
+        //     return device->get_static_tlb_writer(target);
+        // }
         chip_id_t mmio_device_id = device_to_mmio_device_.at(target.chip);
         tt_SiliconDevice* device = dynamic_cast<tt_SiliconDevice*>(this->mmio_device_id_to_driver_.at(mmio_device_id).get());
         const metal_SocDescriptor &soc_desc = this->get_soc_desc(target.chip);
@@ -128,6 +145,9 @@ class Cluster {
     }
 
     std::uint32_t get_numa_node_for_device(uint32_t device_id) const {
+        // if(this->target_type_ == TargetDevice::VCS) {
+        //     return 0;
+        // }
         uint32_t associated_mmio_device_id = this->get_associated_mmio_device(device_id);
         tt_SiliconDevice* driver = dynamic_cast<tt_SiliconDevice*>(this->mmio_device_id_to_driver_.at(associated_mmio_device_id).get());
         return driver->get_numa_node_for_pcie_device(associated_mmio_device_id);
