@@ -878,39 +878,39 @@ op_map = {
     },
     # Broadcast
     "bcast-add-h": {
-        "tt_op": tt_lib_ops.bcast_add_h,
+        "tt_op": ttnn.add,
         "pytorch_op": pytorch_ops.add,
     },
     "bcast-add-w": {
-        "tt_op": tt_lib_ops.bcast_add_w,
+        "tt_op": ttnn.add,
         "pytorch_op": pytorch_ops.add,
     },
     "bcast-add-hw": {
-        "tt_op": tt_lib_ops.bcast_add_hw,
+        "tt_op": ttnn.add,
         "pytorch_op": pytorch_ops.add,
     },
     "bcast-sub-h": {
-        "tt_op": tt_lib_ops.bcast_sub_h,
+        "tt_op": ttnn.subtract,
         "pytorch_op": pytorch_ops.sub,
     },
     "bcast-sub-w": {
-        "tt_op": tt_lib_ops.bcast_sub_w,
+        "tt_op": ttnn.subtract,
         "pytorch_op": pytorch_ops.sub,
     },
     "bcast-sub-hw": {
-        "tt_op": tt_lib_ops.bcast_sub_hw,
+        "tt_op": ttnn.subtract,
         "pytorch_op": pytorch_ops.sub,
     },
     "bcast-mul-h": {
-        "tt_op": tt_lib_ops.bcast_mul_h,
+        "tt_op": ttnn.multiply,
         "pytorch_op": pytorch_ops.mul,
     },
     "bcast-mul-w": {
-        "tt_op": tt_lib_ops.bcast_mul_w,
+        "tt_op": ttnn.multiply,
         "pytorch_op": pytorch_ops.mul,
     },
     "bcast-mul-hw": {
-        "tt_op": tt_lib_ops.bcast_mul_hw,
+        "tt_op": ttnn.multiply,
         "pytorch_op": pytorch_ops.mul,
     },
     # Reduce

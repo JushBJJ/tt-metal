@@ -680,37 +680,26 @@ def test_bcast_hw(device, num_cores, in0_height_sharded, out_height_sharded, in_
             ttl.tensor.TensorMemoryLayout.HEIGHT_SHARDED,
             ttl.tensor.ShardOrientation.ROW_MAJOR,
         )
-        tt_out = ttl.operations.primary.bcast(
+        tt_out = ttnn.multiply(
             tt_in0_height_sharded,
             tt_scalar_dram,
-            ttl.tensor.BcastOpMath.MUL,
-            ttl.tensor.BcastOpDim.HW,
-            output_mem_config=out_mem_config,
-            in_place=in_place,
+            memory_config=out_mem_config,
         )
         tt_in0_height_sharded.deallocate()
     else:
-        tt_out = ttl.operations.primary.bcast(
-            tt_in0_dram,
-            tt_scalar_dram,
-            ttl.tensor.BcastOpMath.MUL,
-            ttl.tensor.BcastOpDim.HW,
-            output_mem_config=out_mem_config,
-            in_place=in_place,
-        )
+        tt_out = ttnn.multiply(tt_in0_dram, tt_scalar_dram, memory_config=out_mem_config)
+        tt_in0_dram.deallocte()
 
     if out_height_sharded:
         tt_out = ttl.tensor.sharded_to_interleaved(tt_out, output_mem_config=dram_interleaved_memory_config)
 
     # Reference is out and input dram interleaved
-    tt_out_ref = ttl.operations.primary.bcast(
+    tt_out_ref = ttnn.multiply(
         tt_in0_dram,
         tt_scalar_dram,
-        ttl.tensor.BcastOpMath.MUL,
-        ttl.tensor.BcastOpDim.HW,
-        output_mem_config=dram_interleaved_memory_config,
-        in_place=in_place,
+        memory_config=dram_interleaved_memory_config,
     )
+    tt_in0_dram.deallocate()
 
     tt_out_torch = tt2torch_tensor(tt_out)
     tt_ref_torch = tt2torch_tensor(tt_out_ref)

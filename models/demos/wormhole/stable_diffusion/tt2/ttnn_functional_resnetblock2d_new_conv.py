@@ -572,11 +572,9 @@ class resnetBlock2D:
                 )
 
         if temb is not None and time_embedding_norm == "default":
-            hidden_states = ttnn.experimental.tensor.bcast(
+            hidden_states = ttnn.add(
                 hidden_states,
                 temb,
-                ttnn.experimental.tensor.BcastOpMath.ADD,
-                ttnn.experimental.tensor.BcastOpDim.H,
                 output_mem_config=hidden_states.memory_config(),
             )
 

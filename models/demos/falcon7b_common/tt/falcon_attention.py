@@ -305,12 +305,10 @@ class TtFalconAttentionPrefill(nn.Module):
             key_layer_transposed[i].deallocate()
 
         for i in range(self.num_devices):
-            attn_weights[i] = ttnn.experimental.tensor.bcast(
+            attn_weights[i] = ttnn.multiply(
                 attn_weights[i],
                 self.scalar[i],
-                ttnn.experimental.tensor.BcastOpMath.MUL,
-                ttnn.experimental.tensor.BcastOpDim.HW,
-                output_mem_config=self.model_config["PRE_SOFTMAX_SCALE_OUTPUT_MEMCFG"],
+                memory_config=self.model_config["PRE_SOFTMAX_SCALE_OUTPUT_MEMCFG"],
             )
 
         if attention_mask is not None:
@@ -826,12 +824,10 @@ class TtFalconAttentionDecode(nn.Module):
 
         if self.model_config["l1_sharded"] == False:
             for i in range(self.num_devices):
-                attn_weights[i] = ttnn.experimental.tensor.bcast(
+                attn_weights[i] = ttnn.multiply(
                     attn_weights[i],
                     self.scalar[i],
-                    ttnn.experimental.tensor.BcastOpMath.MUL,
-                    ttnn.experimental.tensor.BcastOpDim.HW,
-                    output_mem_config=self.model_config["PRE_SOFTMAX_SCALE_OUTPUT_MEMCFG"],
+                    memory_config=self.model_config["PRE_SOFTMAX_SCALE_OUTPUT_MEMCFG"],
                 )
 
             if attention_mask is not None:

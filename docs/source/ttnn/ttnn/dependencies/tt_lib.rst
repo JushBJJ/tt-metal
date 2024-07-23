@@ -257,10 +257,6 @@ Primary Operations
 Enums
 =====
 
-.. autoclass:: tt_lib.tensor.BcastOpMath
-
-.. autoclass:: tt_lib.tensor.BcastOpDim
-
 .. autoclass:: tt_lib.tensor.ReduceOpMath
 
 .. autoclass:: tt_lib.tensor.ReduceOpDim
@@ -397,8 +393,6 @@ Tensor creation operations
 
 Broadcast and Reduce
 ====================
-
-.. autofunction:: tt_lib.tensor.bcast
 
 .. autofunction:: tt_lib.tensor.reduce
 
