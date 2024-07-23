@@ -1,0 +1,64 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%post
+    # Set noninteractive to avoid prompts during build
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install build and runtime deps
+    apt-get -y update
+    xargs -a /opt/tt_metal_infra/scripts/docker/requirements.txt apt-get install -y --no-install-recommends
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+    # Install dev deps
+    apt-get -y update
+    xargs -a /opt/tt_metal_infra/scripts/docker/requirements_dev.txt apt-get install -y --no-install-recommends
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+    # Test Related Dependencies
+    # /bin/bash /opt/tt_metal_infra/scripts/docker/install_test_deps.sh $DOXYGEN_VERSION
+
+    # Setup Python and install dependencies
+    python3 -m pip config set global.extra-index-url https://download.pytorch.org/whl/cpu
+    python3 -m pip install setuptools wheel
+    python3 -m pip install -r /opt/tt_metal_infra/tt-metal/tt_metal/python_env/requirements-dev.txt
+    python3 -m pip install -r /opt/tt_metal_infra/tt-metal/docs/requirements-docs.txt
+
+    # Install Clang-17
+    wget https://apt.llvm.org/llvm.sh
+    chmod u+x llvm.sh
+    ./llvm.sh 17
+
+    # Install compatible gdb debugger for clang-17
+    wget https://ftp.gnu.org/gnu/gdb/gdb-14.2.tar.gz
+    tar -xvf gdb-14.2.tar.gz
+    cd gdb-14.2
+    ./configure
+    make -j$(nproc)
+
+    # Install libc++-17-dev and libc++abi-17-dev after Clang-17
+    apt-get -y update
+    apt-get install -y --no-install-recommends libc++-17-dev libc++abi-17-dev
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%files
+    scripts/docker/requirements.txt /opt/tt_metal_infra/scripts/docker/requirements.txt
+    scripts/docker/requirements_dev.txt /opt/tt_metal_infra/scripts/docker/requirements_dev.txt
+    scripts/docker/install_test_deps.sh /opt/tt_metal_infra/scripts/docker/install_test_deps.sh
+    scripts /opt/tt_metal_infra/scripts
+    build_metal.sh /scripts/build_metal.sh
+    docs/requirements-docs.txt /opt/tt_metal_infra/tt-metal/docs/requirements-docs.txt
+    tt_metal/python_env/* /opt/tt_metal_infra/tt-metal/tt_metal/python_env/
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export DOXYGEN_VERSION=1.9.6
+    export TT_METAL_INFRA_DIR=/opt/tt_metal_infra
+    export PYTHON_ENV_DIR=${TT_METAL_INFRA_DIR}/tt-metal/python_env
+    export PATH="$TT_METAL_INFRA_DIR/gdb-14.2/gdb:$PATH"
+
+%runscript
+    tail -f /dev/null
