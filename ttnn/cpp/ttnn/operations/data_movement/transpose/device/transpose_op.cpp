@@ -9,6 +9,7 @@
 #include "tt_metal/host_api.hpp"
 #include "tt_metal/common/constants.hpp"
 
+#include "transpose_program_factory.hpp"
 using namespace tt::constants;
 
 
@@ -121,15 +122,15 @@ operation::ProgramWithCallbacks Transpose::create_program(const std::vector<Tens
     switch (parallelization_strategy) {
         case TransposeOpParallelizationStrategy::MULTI_CORE_WH:
             if (input_tensor.is_sharded()) {
-                return ttnn::operations::data_movement::transpose_wh_multi_core_sharded(input_tensor, output_tensor);
+                return detail::transpose_wh_multi_core_sharded(input_tensor, output_tensor);
             } else {
-                return ttnn::operations::data_movement::transpose_wh_multi_core(input_tensor, output_tensor);
+                return detail::transpose_wh_multi_core(input_tensor, output_tensor);
             }
             break;
         case TransposeOpParallelizationStrategy::MULTI_CORE_HC:
-            return ttnn::operations::data_movement::transpose_hc_multi_core(input_tensor, output_tensor);
+            return detail::transpose_hc_multi_core(input_tensor, output_tensor);
         case TransposeOpParallelizationStrategy::MULTI_CORE_CN:
-            return ttnn::operations::data_movement::transpose_cn_multi_core(input_tensor, output_tensor);
+            return detail::transpose_cn_multi_core(input_tensor, output_tensor);
         default:
             TT_THROW("Unsupported parallelization strategy");
     }

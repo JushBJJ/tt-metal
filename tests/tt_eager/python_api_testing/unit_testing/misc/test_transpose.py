@@ -5,7 +5,7 @@
 import pytest
 import torch
 import numpy as np
-
+import ttnn
 import tt_lib as ttl
 from loguru import logger
 from models.utility_functions import is_grayskull
@@ -37,7 +37,7 @@ def transpose(
     ).to(ttl.tensor.Layout.TILE)
 
     xt = xt.to(device, input_mem_config)
-    xtt = ttl.tensor.transpose(xt, dim0, dim1, output_mem_config)
+    xtt = ttnn.transpose(xt, dim0, dim1, memory_config=output_mem_config)
     assert list(xtt.get_legacy_shape()) == output_shape
     transposed_ref = x.transpose(dim0, dim1)
 

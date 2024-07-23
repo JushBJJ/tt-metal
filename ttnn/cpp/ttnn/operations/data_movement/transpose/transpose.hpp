@@ -24,15 +24,15 @@ inline Tensor transpose_(const Tensor &a, TransposeOpDim transpose_dim, const Me
             pad_c = true;
             break;
         case TransposeOpDim::NH:
-            return ttnn::permute((const ttnn::Tensor)a, std::vector<int64_t>({2, 1, 0, 3}), output_mem_config);
+            return ttnn::permute(a, std::vector<int64_t>({2, 1, 0, 3}), output_mem_config);
             pad_n = true;
             break;
         case TransposeOpDim::NW:
-            return ttnn::permute((const ttnn::Tensor)a, std::vector<int64_t>({3, 1, 2, 0}), output_mem_config);
+            return ttnn::permute(a, std::vector<int64_t>({3, 1, 2, 0}), output_mem_config);
             pad_n = true;
             break;
         case TransposeOpDim::CW:
-            return ttnn::permute((const ttnn::Tensor)a, std::vector<int64_t>({0, 3, 2, 1}), output_mem_config);
+            return ttnn::permute(a, std::vector<int64_t>({0, 3, 2, 1}), output_mem_config);
             pad_c = true;
             break;
         default:

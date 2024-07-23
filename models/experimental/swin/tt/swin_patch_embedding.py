@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 import collections.abc
 import torch
 import torch.nn as nn
-
+import ttnn
 from models.utility_functions import (
     tt_to_torch_tensor,
     torch_to_tt_tensor_rm,
@@ -68,6 +68,6 @@ class TtSwinPatchEmbeddings(nn.Module):
         batch, channel, height, width = embeddings.get_legacy_shape()
         output_dimensions = (height, width)
         embeddings = fallback_ops.reshape(embeddings, 1, batch, channel, height * width)
-        embeddings = tt_lib.tensor.transpose(embeddings, -2, -1)
+        embeddings = ttnn.transpose(embeddings, -2, -1)
 
         return embeddings, output_dimensions
