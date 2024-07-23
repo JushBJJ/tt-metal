@@ -68,7 +68,7 @@ jobs:
           cp -Lr docs/source/tt-metalium/* tt-metalium
           rm tt-metalium/conf.py  # Do not change conf.py
           echo "Copying the docs into the repo"
-          cp -r tt-metalium/* docs-test/tt-metalium
+          cp -r tt-metalium/* tenstorrent.github.io/tt-metalium
       - name: Package TT-NN Docs
         run: |
           mkdir ttnn-docs
@@ -76,10 +76,10 @@ jobs:
           cp -Lr docs/source/ttnn/* ttnn-docs
           rm ttnn-docs/conf.py  # Do not change conf.py
           echo "Copying the docs into the repo"
-          cp -r ttnn-docs/* docs-test/ttnn
+          cp -r ttnn-docs/* tenstorrent.github.io/ttnn
       - name: Push new versions to the Docs repo for publishing
         run: |
-          cd docs-test
+          cd tenstorrent.github.io
           echo "Register new documentation versions"
           python update_tags.py tt-metalium $DOCS_VERSION
           python update_tags.py ttnn $DOCS_VERSION
