@@ -417,6 +417,7 @@ void Program::invalidate_circular_buffer_allocation() {
         cb_allocator.reset_available_addresses();
     }
     this->local_circular_buffer_allocation_needed_ = true;
+    GraphTracker::instance().track_deallocate_cb();
 }
 
 void Program::allocate_circular_buffers() {
