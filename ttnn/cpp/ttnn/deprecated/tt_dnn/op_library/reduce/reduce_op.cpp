@@ -146,7 +146,7 @@ ReduceOpParallelizationStrategy Reduce::get_parallelization_strategy(const std::
 
 //reduce min
 //reduce min = - reduce_max( -x )
-Tensor reduce_min(const Tensor &input_tensor, ReduceOpDim reduce_dim, float scaler = 1.0f, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG, std::optional<DeviceComputeKernelConfig> compute_kernel_config = std::nullopt) {
+Tensor reduce_min(const Tensor &input_tensor, ReduceOpDim reduce_dim, float scaler = 1.0f, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config = std::nullopt) {
     Tensor input = input_tensor;
     if(input.get_layout()==Layout::ROW_MAJOR && input.storage_type() == StorageType::DEVICE){
         input = ttnn::operations::unary_backward::change_layout_to_tile(input, output_mem_config);
@@ -157,7 +157,7 @@ Tensor reduce_min(const Tensor &input_tensor, ReduceOpDim reduce_dim, float scal
     return min_tensor;
 }
 
-Tensor reduce(const Tensor &input_tensor, ReduceOpMath reduce_math, ReduceOpDim reduce_dim, float scaler, const MemoryConfig& output_mem_config, const std::optional<DataType>& output_dtype, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor reduce(const Tensor &input_tensor, ReduceOpMath reduce_math, ReduceOpDim reduce_dim, float scaler, const MemoryConfig& output_mem_config, const std::optional<DataType>& output_dtype, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     if ( reduce_math == ReduceOpMath::MIN ) {
         return reduce_min(input_tensor,reduce_dim,scaler,output_mem_config);
     }
@@ -197,14 +197,14 @@ Tensor reduce(const Tensor &input_tensor, ReduceOpMath reduce_math, ReduceOpDim 
     }
     return output_tensors.at(0);
 }
-Tensor mean_hw(const Tensor& input_tensor, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor mean_hw(const Tensor& input_tensor, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     return mean(input_tensor,2,output_mem_config, compute_kernel_config);
 }
 Tensor global_mean(const Tensor& input_tensor, const MemoryConfig& output_mem_config) {
     float inv_volume = 1.0f/input_tensor.volume();
     return ttnn::mul_sfpu( inv_volume, global_sum(input_tensor,output_mem_config), output_mem_config);
 }
-Tensor mean(const Tensor& input_tensor,uint aggregate_dims /* = 2 */, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor mean(const Tensor& input_tensor,uint aggregate_dims /* = 2 */, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     tt::tt_metal::Shape shape = input_tensor.get_legacy_shape();
 
     TT_FATAL( aggregate_dims >= 2 && aggregate_dims <= 4, "mean aggregate dimensions should be [HW],[CHW] or [NCHW]");
@@ -225,7 +225,7 @@ Tensor mean(const Tensor& input_tensor,uint aggregate_dims /* = 2 */, const Memo
 }
 
 template <ReduceOpMath OpKind>
-Tensor reduce_on_dim(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor reduce_on_dim(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     TT_FATAL( dim >= 0 && dim <= 3, "dimension have to be 0-3 only corresponding to N,C,H,W");
     constexpr float scaler1 = 1.0;
 
@@ -284,24 +284,24 @@ Tensor reduce_on_dim(const Tensor &input_tensor, uint dim, const MemoryConfig& o
 }
 
 
-Tensor sum(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor sum(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     TT_FATAL( dim >= 0 && dim <= 3, "dimension have to be 0-3 only corresponding to N,C,H,W");
     return reduce_on_dim<ReduceOpMath::SUM>(input_tensor, dim, operation::DEFAULT_OUTPUT_MEMORY_CONFIG, compute_kernel_config);
 }
 
-Tensor min(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor min(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     TT_FATAL( dim >= 0 && dim <= 3, "dimension have to be 0-3 only corresponding to N,C,H,W");
     return reduce_on_dim<ReduceOpMath::MIN>(input_tensor, dim, output_mem_config, compute_kernel_config);
 }
 
-Tensor max(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+Tensor max(const Tensor &input_tensor, uint dim, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     TT_FATAL( dim >= 0 && dim <= 3, "dimension have to be 0-3 only corresponding to N,C,H,W");
     return reduce_on_dim<ReduceOpMath::MAX>(input_tensor, dim, output_mem_config, compute_kernel_config);
 }
 
 
-using ReduceFnT = Tensor(*)(const Tensor&,unsigned int, const MemoryConfig&, std::optional<DeviceComputeKernelConfig>);
-Tensor global_reduce(ReduceFnT f,const Tensor& val, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+using ReduceFnT = Tensor(*)(const Tensor&,unsigned int, const MemoryConfig&, const std::optional<DeviceComputeKernelConfig>&);
+Tensor global_reduce(ReduceFnT f,const Tensor& val, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     Tensor result = val;
     for(int rank = val.get_legacy_shape().rank()-1; rank >=0; rank--) {
         result = f(result, rank, output_mem_config, compute_kernel_config);
@@ -317,16 +317,16 @@ Tensor global_reduce(ReduceFnT f,const Tensor& val, const MemoryConfig& output_m
     return result;
 }
 
-Tensor global_sum(const Tensor& val, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
-    return  global_reduce(sum,val,output_mem_config, compute_kernel_config);
+Tensor global_sum(const Tensor& val, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
+    return global_reduce(sum,val,output_mem_config, compute_kernel_config);
 }
 
-Tensor global_max(const Tensor& val, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
-    return  global_reduce(max,val,output_mem_config, compute_kernel_config);
+Tensor global_max(const Tensor& val, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
+    return global_reduce(max,val,output_mem_config, compute_kernel_config);
 }
 
-Tensor global_min(const Tensor& val, const MemoryConfig& output_mem_config, std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
-    return  global_reduce(min,val,output_mem_config, compute_kernel_config);
+Tensor global_min(const Tensor& val, const MemoryConfig& output_mem_config, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
+    return global_reduce(min,val,output_mem_config, compute_kernel_config);
 }
 
 }  // namespace tt_metal

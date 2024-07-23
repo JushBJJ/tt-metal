@@ -18,7 +18,7 @@ namespace tt {
 namespace tt_metal {
 
 operation::ProgramWithCallbacks reduce_multi_core_w(
-    const Tensor &a, Tensor &output, ReduceOpMath reduce_op, float scaler,  std::optional<DeviceComputeKernelConfig> compute_kernel_config) {
+    const Tensor &a, Tensor &output, ReduceOpMath reduce_op, float scaler, const std::optional<DeviceComputeKernelConfig>& compute_kernel_config) {
     const auto shape = a.get_legacy_shape();
     uint32_t W = shape[3], H = shape[2], NC = shape[1] * shape[0];
     uint32_t HW = H * W;

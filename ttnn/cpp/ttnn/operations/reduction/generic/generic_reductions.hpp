@@ -34,7 +34,7 @@ struct Reduce {
         const std::optional<std::variant<int, std::vector<int>>>& dim_arg,
         const bool keepdim,
         const std::optional<MemoryConfig>& memory_config_arg = std::nullopt,
-        std::optional<DeviceComputeKernelConfig> compute_kernel_config = std::nullopt) {
+        const std::optional<DeviceComputeKernelConfig>& compute_kernel_config = std::nullopt) {
         if (not keepdim) {
             TT_THROW("keepdim=False is not supported");
         }
