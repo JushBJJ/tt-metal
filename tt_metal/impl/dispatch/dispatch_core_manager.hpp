@@ -75,7 +75,6 @@ struct dispatch_core_placement_t {
     std::optional<tt_cxy_pair> tunneler_d = std::nullopt; // ethernet tunneler
 };
 
-
 class dispatch_core_manager {
    public:
     dispatch_core_manager &operator=(const dispatch_core_manager &) = delete;
@@ -83,14 +82,17 @@ class dispatch_core_manager {
     dispatch_core_manager(const dispatch_core_manager &) = delete;
     dispatch_core_manager(dispatch_core_manager &&other) noexcept = delete;
 
-    // Ugly to accept num HW CQs here but it is needed to pull the correct number of initially available dispatch cores for assignment
-    static dispatch_core_manager &get(uint8_t num_hw_cqs) {
-        static std::unordered_map<uint8_t, std::unique_ptr<dispatch_core_manager>> dispatch_core_managers;
-        if (dispatch_core_managers[num_hw_cqs] == nullptr) {
-            // Need to do this since dispatch_core_manager constructor is private
-            dispatch_core_managers[num_hw_cqs] = std::unique_ptr<dispatch_core_manager>(new dispatch_core_manager(num_hw_cqs));
+    static void initialize(uint8_t max_num_hw_cqs) noexcept {
+        log_debug(tt::LogMetal, "DevicePool initialize");
+        if (_inst == nullptr) {
+            static dispatch_core_manager dispatch_core_manager(max_num_hw_cqs);
+            _inst = &dispatch_core_manager;
         }
-        return *dispatch_core_managers[num_hw_cqs];
+    }
+
+    static dispatch_core_manager &instance() {
+        TT_ASSERT(_inst != nullptr, "Trying to get dispatch_core_manager without initializing it");
+        return *_inst;
     }
 
     /// @brief Gets the location of the kernel desginated to read from the issue queue region from a particular command queue
@@ -343,6 +345,7 @@ class dispatch_core_manager {
     }
 
     void add_dispatch_core_to_device(chip_id_t device_id, const CoreCoord& core) {
+        // TODO: remove this API, we should read the core descriptor once, should not have backdoors like this to add cores
         auto& dispatch_cores = available_dispatch_cores_by_device.at(device_id);
         if (std::find(dispatch_cores.begin(), dispatch_cores.end(), core) == dispatch_cores.end()) {
             dispatch_cores.push_back(core);
@@ -383,6 +386,8 @@ class dispatch_core_manager {
     std::unordered_map<chip_id_t, std::unordered_map<uint16_t, std::unordered_map<uint8_t, dispatch_core_placement_t>>> dispatch_core_assignments;
     std::unordered_map<chip_id_t, std::list<CoreCoord>> available_dispatch_cores_by_device;
     std::unordered_map<chip_id_t, CoreType> dispatch_core_type_by_device;
+    static dispatch_core_manager *_inst;
+
 };
 
 
