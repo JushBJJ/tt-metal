@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "common/core_coord.h"
 #include "ttnn/operations/ccl/all_gather/device/all_gather_op.hpp"
 #include "ttnn/experimental/tt_dnn/op_library/math.hpp"
 
@@ -55,8 +56,7 @@ std::vector<Tensor> AllGatherMatmul::create_output_tensors(const std::vector<Ten
 operation::ProgramWithCallbacks AllGatherMatmul::create_program(const std::vector<Tensor> & input_tensors, const std::vector<std::optional<const ttnn::Tensor>>& optional_input_tensors, std::vector<Tensor> &output_tensors) const {
 
     // Return the AllGatherMatmul program with callbacks
-    return all_gather_struct.create_program({input_tensors.at(0)}, output_tensors);
-
+    return all_gather_matmul_multi_core_with_workers(input_tensors.at(0), output_tensors.at(0), this->all_gather_struct.dim, this->all_gather_struct.num_links, this->all_gather_struct.ring_size, this->all_gather_struct.ring_index, this->all_gather_struct.receiver_device_id, this->all_gather_struct.sender_device_id, this->all_gather_struct.topology, this->all_gather_core_grid_offset);
 }
 
 namespace operations {
@@ -66,6 +66,7 @@ std::vector <ttnn::Tensor> all_gather_matmul(
     const ttnn::Tensor& input_tensor,
     const ttnn::Tensor& weight_tensor,
     const uint32_t dim,
+    const CoreCoord all_gather_core_grid_offset,
     const uint32_t num_links,
     const std::optional<MemoryConfig>& memory_config,
     const bool transpose_a,
@@ -86,7 +87,7 @@ std::vector <ttnn::Tensor> all_gather_matmul(
 
 
     operation::launch_op(
-        [dim, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid, devices](
+        [dim, all_gather_core_grid_offset, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid, devices](
             const std::vector<Tensor>& input_tensors,
             const std::vector<std::optional<const ttnn::Tensor>>& optional_input_tensors,
             const std::vector<std::optional<Tensor>>& optional_output_tensors) mutable -> std::vector<Tensor> {
@@ -143,7 +144,9 @@ std::vector <ttnn::Tensor> all_gather_matmul(
                     /* All Gather Params */
                     all_gather_struct,
                     /* Matmul params */
-                    matmul_struct},
+                    matmul_struct,
+                    /* Fusion params */
+                    all_gather_core_grid_offset},
                 {input_tensor, all_gather_out_tensor, weight_tensor}, optional_input_tensors);
         },
         {input_tensor, weight_tensor}, output_tensors, optional_input_tensors);

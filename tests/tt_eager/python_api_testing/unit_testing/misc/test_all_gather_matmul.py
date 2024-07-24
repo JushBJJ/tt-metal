@@ -159,6 +159,7 @@ def run_all_gather_on_t3000_impl(
             input_tensor_mesh,
             weight_tt,
             dim,
+            (0, 1),
             num_links=num_links,
             memory_config=mem_config,
             program_config=program_config,

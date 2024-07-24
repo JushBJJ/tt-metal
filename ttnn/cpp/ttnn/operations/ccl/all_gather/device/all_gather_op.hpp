@@ -280,7 +280,8 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
     const uint32_t ring_index,
     const std::optional<chip_id_t> receiver_device_id,
     const std::optional<chip_id_t> sender_device_id,
-    all_gather_op::Topology topology);
+    all_gather_op::Topology topology,
+    const CoreCoord core_grid_offset = CoreCoord(0, 0));
 
 
 struct ShardedAllGatherConfig {

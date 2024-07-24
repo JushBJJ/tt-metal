@@ -35,6 +35,9 @@ struct AllGatherMatmul {
     /* Matmul Params */
     const tt::operations::primary::Matmul matmul_struct;
 
+    /* Fusion Params */
+    const CoreCoord all_gather_core_grid_offset;
+
     /* General */
     void validate(const std::vector<Tensor> &input_tensors, const std::vector<std::optional<const Tensor>>& optional_input_tensors) const;
     std::vector<tt::tt_metal::Shape> compute_output_shapes(const std::vector<Tensor> &input_tensors) const;
@@ -50,17 +53,15 @@ operation::ProgramWithCallbacks all_gather_matmul_multi_core_with_workers(
 
     /* General Params */
     const Tensor& input_tensor,
-    const Tensor& weight_tensor,
-    Tensor& all_gather_output_tensor,
-
-    /* All Gather Params */
+    Tensor& output_tensor,
     const uint32_t dim,
     const uint32_t num_links,
     const uint32_t ring_size,
     const uint32_t ring_index,
     const std::optional<chip_id_t> receiver_device_id,
     const std::optional<chip_id_t> sender_device_id,
-    all_gather_op::Topology topology
+    all_gather_op::Topology topology,
+    const CoreCoord core_grid_offset = CoreCoord(0, 0)
 
     /* Matmul Params */
     // const std::optional<const Tensor> bias,
@@ -88,6 +89,7 @@ std::vector<Tensor> all_gather_matmul(
     const Tensor& input_tensor,
     const Tensor& weight_tensor,
     const uint32_t dim,
+    const CoreCoord all_gather_core_grid_offset,
     const uint32_t num_links = 1,
     const std::optional<MemoryConfig>& memory_config = std::nullopt,
     const bool transpose_a = false,

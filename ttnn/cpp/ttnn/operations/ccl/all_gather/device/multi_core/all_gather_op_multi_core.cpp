@@ -26,15 +26,15 @@ namespace ttnn {
 
 using namespace ccl;
 
-static std::tuple<CoreRangeSet,CoreRangeSet> select_worker_cores(AllGatherConfig const& all_gather_config, uint32_t num_links, uint32_t link, uint32_t full_send_direction) {
+static std::tuple<CoreRangeSet,CoreRangeSet> select_worker_cores(AllGatherConfig const& all_gather_config, uint32_t num_links, uint32_t link, uint32_t full_send_direction, CoreCoord const& core_grid_offset) {
     constexpr uint32_t worker_grid_width = 8;
     const bool fit_sender_and_receiver_workers_on_same_row = (worker_grid_width / 2) >= all_gather_config.get_num_eth_buffers_per_edm();
     std::set<CoreRange> receiver_worker_cores = {};
     std::set<CoreRange> sender_worker_cores = {};
     uint32_t max_cols = 8;
     uint32_t curr_row = link * (((all_gather_config.get_num_eth_buffers_per_edm() * 2 - 1) / max_cols) + 1) +
-        (full_send_direction * num_links * (((all_gather_config.get_num_eth_buffers_per_edm() * 2 - 1) / max_cols) + 1));
-    uint32_t curr_col = 0;
+        (full_send_direction * num_links * (((all_gather_config.get_num_eth_buffers_per_edm() * 2 - 1) / max_cols) + 1)) + core_grid_offset.y;
+    uint32_t curr_col = core_grid_offset.x;
     for (uint32_t r = 0; r < all_gather_config.get_num_eth_buffers_per_edm(); r++) {
         receiver_worker_cores.insert(CoreRange(CoreCoord(curr_col, curr_row)));
         curr_col ++;
@@ -153,7 +153,8 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
     const uint32_t ring_index,
     const std::optional<chip_id_t> receiver_device_id,
     const std::optional<chip_id_t> sender_device_id,
-    all_gather_op::Topology topology) {
+    all_gather_op::Topology topology,
+    const CoreCoord core_grid_offset) {
 
     TT_FATAL(!(receiver_device_id == std::nullopt && sender_device_id == std::nullopt), "At least one of receiver_device_id or sender_device_id must be specified");
 
@@ -345,7 +346,7 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
         for (uint32_t i = 0; i < num_links; ++i) {
             // We can't have overlap between the mcast grid for worker cores for different links since mcasting the semaphore in receiver would corrupt other link semaphores
             // We can have overlap between a link's sender and receiver worker grids if we have the semaphores at different addresses
-            auto const& [receiver_workers, sender_workers] = select_worker_cores(all_gather_config, num_links, i, direction);
+            auto const& [receiver_workers, sender_workers] = select_worker_cores(all_gather_config, num_links, i, direction, core_grid_offset);
             uint32_t worker_index = 0;
             uint32_t workers_per_link = all_gather_config.get_num_workers_per_link() / all_gather_config.get_num_eth_buffers_per_edm();
 

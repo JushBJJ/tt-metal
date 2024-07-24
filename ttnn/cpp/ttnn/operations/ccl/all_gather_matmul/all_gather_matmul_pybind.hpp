@@ -30,6 +30,7 @@ void bind_all_gather_matmul(py::module& module, const ccl_operation_t& operation
                const ttnn::Tensor& input_tensor,
                const ttnn::Tensor& weight_tensor,
                const uint32_t dim,
+               const CoreCoord all_gather_core_grid_offset,
                const uint32_t num_links,
                const std::optional<ttnn::MemoryConfig>& memory_config = ttnn::DRAM_MEMORY_CONFIG,
                const bool transpose_a = false,
@@ -39,11 +40,12 @@ void bind_all_gather_matmul(py::module& module, const ccl_operation_t& operation
                const std::optional<const std::string>& activation = std::nullopt,
                const std::optional<const DeviceComputeKernelConfig> compute_kernel_config = std::nullopt,
                const std::optional<const ttnn::CoreGrid> core_grid = std::nullopt) -> std::vector<ttnn::Tensor> {
-                return self(input_tensor, weight_tensor, dim, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid);
+                return self(input_tensor, weight_tensor, dim, all_gather_core_grid_offset, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid);
             },
             py::arg("input_tensor"),
             py::arg("weight_tensor"),
             py::arg("dim"),
+            py::arg("all_gather_core_grid_offset"),
             py::kw_only(),
             py::arg("num_links") = 1,
             py::arg("memory_config") = std::nullopt,
@@ -71,6 +73,7 @@ void py_bind_all_gather_matmul(py::module& module) {
             * :attr:`input_tensor` (ttnn.Tensor): multi-device tensor
             * :attr:`weight_tensor` (ttnn.Tensor): multi-device tensor
             * :attr:`dim` (int)
+            * :attr:`all_gather_core_grid_offset` (ttnn.CoreCoord): Core grid offset for the all-gather operation.
 
         Keyword Args:
             * :attr:`num_links` (int): Number of links to use for the all-gather operation.
@@ -87,7 +90,7 @@ void py_bind_all_gather_matmul(py::module& module) {
 
             >>> tensor = ttnn.from_torch(torch.tensor((1, 2), dtype=torch.bfloat16), device=device)
             >>> weight_tensor = ttnn.from_torch(torch.tensor((2, 1), dtype=torch.bfloat16), device=device)
-            >>> all_gathered_mm_in, mm_out = ttnn.all_gather_matmul(tensor, weight_tensor, dim=0)
+            >>> all_gathered_mm_in, mm_out = ttnn.all_gather_matmul(tensor, weight_tensor, dim=0, (0, 0))
 
         )doc");
 }
