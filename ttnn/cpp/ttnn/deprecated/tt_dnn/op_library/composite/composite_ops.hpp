@@ -78,18 +78,6 @@ Tensor polyval(
     std::vector<float> coeffs,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// min(a,b)
-Tensor min(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// max(a,b)
-Tensor max(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // tanhshrink = x - tanh(x)
 Tensor tanhshrink(
     const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
@@ -97,22 +85,6 @@ Tensor tanhshrink(
 Tensor logical_andi(
     const Tensor& input_a,
     float immediate,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// addcmul(input,tensor1,tensor2,value)=input+value×tensor1×tensor2
-Tensor addcmul(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    const Tensor& input_c,
-    float value,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// addcdiv(input,tensor1,tensor2,value)=input+value×tensor1/tensor2
-Tensor addcdiv(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    const Tensor& input_c,
-    float value,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 Tensor div(
@@ -215,10 +187,6 @@ atan2(y, x) =   x < 0 and y < 0 atan(y/x) - pi
                 x = 0 and y < 0 -pi/2
                 x = 0 and y = 0 0.0
 */
-Tensor atan2(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 // subalpha(input,other,alpha)=input-alpha*other
 Tensor subalpha(
@@ -226,22 +194,6 @@ Tensor subalpha(
     const Tensor& input_b,
     float alpha,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// addalpha(input, other, alpha) = input + (alpha * other)
-Tensor addalpha(
-    const Tensor& input_a,
-    const Tensor& input_b,
-    float alpha,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor = std::nullopt);
-
-Tensor addalpha(
-    uint8_t cq_id,
-    const Tensor& input_a,
-    const Tensor& input_b,
-    float alpha,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor = std::nullopt);
 
 // lerp(input, end, weight) = start + weight * (end - start), weight is float
 Tensor lerp(
@@ -268,9 +220,6 @@ Tensor threshold(
     float threshold,
     float value,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// cbrt(a) = pow(a,1/3) or (cbrt(a))**3 = a.
-Tensor cbrt(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 // where - ternary operator y = (predicate) ? value_true : value_false; elementwise
 Tensor where(
@@ -397,27 +346,6 @@ Tensor full(
 // rpow: y = k**(a)
 Tensor rpow(const Tensor& a, float k, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// clip
-Tensor clip(
-    const Tensor& a,
-    float low,
-    float high,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// hardtanh
-Tensor hardtanh(
-    const Tensor& a,
-    float low = -1.0f,
-    float high = +1.0f,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// clamp
-Tensor clamp(
-    const Tensor& a,
-    float low,
-    float high,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // machine epsilon
 Tensor eps(
     const Shape shape,
@@ -441,22 +369,6 @@ Tensor logical_xori(
 /** hyperbolic operations **/
 // sinh(x) = (exp(x) - exp(-x))/2
 Tensor sinh(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// digamma
-Tensor digamma(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// cosh(x) = (exp(x) + exp(-x))/2
-Tensor cosh(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-/** Inverse hyperbolic operations **/
-// asinh(x) = log(x + sqrt(x^2 + 1))
-Tensor asinh(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// acosh(x) = log(x + sqrt(x^2 - 1))
-Tensor acosh(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// atanh[x] = 0.5 * ln((1 + x) / (1 - x))
-Tensor atanh(const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 /**
  * outer product = matrix multiply when a = [1,1,N,1] and b = [1,1,1,M]
