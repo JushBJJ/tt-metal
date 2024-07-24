@@ -1430,7 +1430,7 @@ def tril(x, *args, device, dtype, layout, input_mem_config, output_mem_config, *
 
 @setup_host_and_device
 def empty(x, *args, device, dtype, layout, input_mem_config, output_mem_config, **kwargs):
-    t1 = ttl.tensor.empty(
+    t1 = ttnn.empty(
         x.shape,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,

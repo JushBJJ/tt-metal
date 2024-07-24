@@ -718,30 +718,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
 
-    m_tensor.def(
-        "empty",
-        &empty,
-        py::arg("shape"),
-        py::arg("data_type").noconvert() = DataType::BFLOAT16,
-        py::arg("layout").noconvert() = Layout::ROW_MAJOR,
-        py::arg("device") = nullptr,
-        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-        R"doc(
-            Returns a new empty tensor (on device) in shape specified by input ``shape``.
-
-            Input shape is specified as a list of 4 integer elements
-
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "shape", "Shape vector", "Vector<int>", "[W, Z, Y, X]", "Yes"
-                "data_type", "Tensor data type", "DataType", "default is BFLOAT16", "No"
-                "layout", "Tensor layout", "Layout", "default is ROW_MAJOR", "No"
-                "device", "Device tensor is placed on", "Device", "default is None (on host)", "No"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-        )doc");
 
     m_tensor.def(
         "ones",

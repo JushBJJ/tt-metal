@@ -355,14 +355,6 @@ Tensor full_like(
     std::optional<Tensor> output_tensor= std::nullopt);
 
 // on-device tensor creation 0s with shape
-Tensor empty(
-    const Shape shape,
-    DataType data_type = DataType::BFLOAT16,
-    Layout layout = Layout::ROW_MAJOR,
-    Device* device = nullptr,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// on-device tensor creation 0s with shape
 Tensor zeros(
     const Shape shape,
     DataType data_type = DataType::BFLOAT16,
