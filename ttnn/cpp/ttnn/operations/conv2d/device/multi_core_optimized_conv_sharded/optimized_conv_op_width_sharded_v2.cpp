@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "tensor/tensor_utils.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/auto_format.hpp"
+#include "ttnn/tensor/tensor_utils.hpp"
+#include "ttnn/deprecated/tt_dnn/op_library/auto_format.hpp"
 #include "ttnn/operations/conv2d/device/optimized_conv_op.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/sharding_utilities.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/sliding_window_op_infra/sliding_window.hpp"
-#include "ttnn/experimental/tt_dnn/op_library/work_split.hpp"
+#include "ttnn/deprecated/tt_dnn/op_library/sharding_utilities.hpp"
+#include "ttnn/deprecated/tt_dnn/op_library/sliding_window_op_infra/sliding_window.hpp"
+#include "ttnn/deprecated/tt_dnn/op_library/work_split.hpp"
 #include "ttnn/operations/eltwise/unary/device/unary_op.hpp"
 #include "tt_metal/common/constants.hpp"
 #include "tt_metal/detail/tt_metal.hpp"
@@ -666,7 +666,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     }
 
     std::set<CoreRange> all_cores;
-    all_cores.insert(CoreRange(CoreCoord(0, 0), CoreCoord(p_config.num_cores_c, 0))); //TODO: Support multiple rows
+    all_cores.insert(CoreRange(CoreCoord(0, 0), CoreCoord(p_config.num_cores_c-1, 0))); //TODO: Support multiple rows
 
     std::string compute_kernel_path = "ttnn/cpp/ttnn/operations/conv2d/device/kernels/conv_bmm_tilize_col_major_out_blocks.cpp";
     std::string activation_kernel_path = "ttnn/cpp/ttnn/operations/conv2d/device/kernels/activation_reader_width_sharded.cpp";
@@ -677,6 +677,15 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     std::vector<uint32_t> writer_rt_args;
     std::vector<uint32_t> writer_compile_time_args;
     std::vector<uint32_t> compute_kernel_args;
+    bool tilize_in0 = true;
+    uint32_t act_mcast_sender_semaphore = tt_metal::CreateSemaphore(program, all_cores, 0);   //0==INVALID
+    uint32_t act_mcast_receiver_semaphore = tt_metal::CreateSemaphore(program, all_cores, 0); //0==INVALID.
+
+    CoreCoord act_mcast_start_core_logical(0,0);
+    CoreCoord act_mcast_end_core_logical(p_config.grid_size.x-1,0);
+    std::cout<<"MCast Cores "<<act_mcast_end_core_logical.x<<" to  "<<act_mcast_end_core_logical.y<<std::endl;
+    auto act_mcast_start = device->worker_core_from_logical_core(act_mcast_start_core_logical);
+    auto act_mcast_end = device->worker_core_from_logical_core(act_mcast_end_core_logical);
 
     activation_kernel_compile_args = {
         (uint32_t)0, // Never in DRAM
@@ -689,35 +698,89 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         (uint32_t)weight_size_w, //Input filter window width
         (uint32_t)(split_reader ? act_block_h_datums_split : act_block_h_datums),
         (uint32_t)(split_reader ? act_block_num_tiles_split / conv_act_c_blocks : act_block_num_tiles / conv_act_c_blocks),
-        (uint32_t)conv_act_c_blocks
+        (uint32_t)conv_act_c_blocks,
+        (uint32_t)act_mcast_sender_semaphore,
+        (uint32_t)act_mcast_receiver_semaphore,
+        (uint32_t)act_mcast_start.x,
+        (uint32_t)act_mcast_start.y,
+        (uint32_t)act_mcast_end.x,
+        (uint32_t)act_mcast_end.y,
+        (uint32_t)act_block_num_tiles*tt_metal::detail::TileSize(tilized_act_df),
+        (uint32_t)total_num_cores
     };
 
-    // compute_kernel_args = {
-    //     in0_block_w,
-    //     act_num_subblocks,
-    //     in0_block_num_tiles,
-    //     in0_subblock_num_tiles,
-    //     act_subblock_h_ntiles,
+    uint32_t num_weight_slices_width = weight_matrix_width_ntiles / per_core_out_matrix_width_ntiles;
+    uint32_t in0_block_w = act_block_w_ntiles / conv_act_c_blocks;
+    uint32_t num_blocks_act_h_per_core = (per_core_out_matrix_height_ntiles + act_block_h_ntiles - 1) / act_block_h_ntiles;
+    uint32_t num_blocks_weight_w_per_core = per_core_out_matrix_width_ntiles / weight_block_w_ntiles;
+    uint32_t bias_ntiles_per_core = bias_ntiles / num_weight_slices_width;
 
-    //     weight_num_subblocks,
-    //     in1_block_num_tiles,
-    //     weight_block_w_ntiles,
+    std::map<string, string> writer_defines;
+    std::map<string, string> writer_mcast_sender_defines;
+    std::map<string, string> compute_defines;
 
-    //     num_blocks_act_h_per_core,
-    //     in0_num_blocks_w,
-    //     num_blocks_weight_w_per_core,
+    if (output.memory_config().is_sharded()) {
+        writer_defines["SHARDED_OUT"] = "1";
+        writer_mcast_sender_defines["SHARDED_OUT"] = "1";
+    }
+    if (total_num_cores == 1) {
+        writer_mcast_sender_defines["SKIP_MCAST"] = "1";
+    }
+    if (has_bias) {
+        writer_defines["FUSE_BIAS"] = "1";
+        writer_mcast_sender_defines["FUSE_BIAS"] = "1";
+        compute_defines["FUSE_BIAS"] = "1";
+    }
 
-    //     out_subblock_h_ntiles_padded,
-    //     out_subblock_w_ntiles,
-    //     out_subblock_num_tiles,
+    if (fuse_relu) {
+        compute_defines["PACK_RELU"] = "1";
+    }
 
-    //     tilize_in0,
-    //     untilize_out,
+    if (!tilize_in0) {
+        compute_defines["PRE_TILIZE"] = "1";
+    }
 
-    //     bias_ntiles_per_core
-    // };
+    if (split_reader) {
+        reader_defines["SPLIT_READER"] = "1";
+        compute_defines["SPLIT_READER"] = "1";
+    }
+
+    if (false) {
+        compute_defines["PACKER_L1_ACC"] = "1";
+    }
+
+    compute_kernel_args = {
+        act_block_w_ntiles, //in0_block_w
+        act_num_subblocks,
+        act_block_num_tiles, //in0_block_num_tiles,
+        act_subblock_num_tiles, //in0_sublock_num_tiles
+        act_subblock_h_ntiles,
+
+
+        weight_num_subblocks,
+        weight_block_num_tiles,//in1_block_num_tiles,
+        weight_block_w_ntiles,
+
+        num_blocks_act_h_per_core,
+        num_blocks_act_w, //in0_num_blocks_w,
+        num_blocks_weight_w_per_core,
+
+        out_subblock_h_ntiles_padded,
+        out_subblock_w_ntiles,
+        out_subblock_num_tiles,
+
+        tilize_in0,
+        untilize_out,
+
+        bias_ntiles_per_core
+    };
+
+
+
 
     uint32_t act_tile_size = tt_metal::detail::TileSize(act_df);
+    uint32_t tilized_act_tile_size = tt_metal::detail::TileSize(tilized_act_df);
+
     uint32_t num_act_cb_tiles = act_block_h_ntiles * act_block_w_ntiles / conv_act_c_blocks;
 
     CircularBufferConfig cb_sharded_act_config =
@@ -726,6 +789,16 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         cb_sharded_act_config.set_globally_allocated_address(*a.buffer());
 
     auto cb_sharded_act = tt_metal::CreateCircularBuffer(program, all_cores, cb_sharded_act_config);
+
+
+    // Used for placing tilized activations
+    CircularBufferConfig cb_src0_tilized_config =
+        CircularBufferConfig(
+            act_block_num_tiles * tilized_act_tile_size, {{tilize_mode_tilized_act_cb, tilized_act_df}})
+            .set_page_size(tilize_mode_tilized_act_cb, tilized_act_tile_size);
+    auto cb_src0_tilized = tt_metal::CreateCircularBuffer(program, all_cores, cb_src0_tilized_config);
+    // log_debug(LogOp, "Tilized Act CB: {}, npages: {}, pagesize: {}", tilize_mode_tilized_act_cb, num_cb0_tilized_tiles, tilized_act_tile_size);
+
 
     CircularBufferConfig cb_act_row_major_bfloat16_config =
                 CircularBufferConfig(num_act_cb_tiles * act_tile_size, {{act_cb_row_major_bfloat16, act_df}})
@@ -743,18 +816,47 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
 
     log_debug(LogOp, "Act Block CB Address: {}",GetCircularBufferConfig(program,cb_act_row_major_bfloat16).globally_allocated_address());
 
+    CircularBufferConfig cb_for_reader_indices_config =
+        CircularBufferConfig(out_block_h_datums * 2, {{cb_for_reader_indices, tt::DataFormat::Float16_b}})
+            .set_page_size(cb_for_reader_indices, out_block_h_datums * 2);
+    cb_for_reader_indices_config.set_globally_allocated_address(*conv_reader_indices.value().buffer());
+    auto cb_for_reader_indices_id =
+        tt_metal::CreateCircularBuffer(program, all_cores, cb_for_reader_indices_config);
+
+
     auto act_kernel_id = CreateKernel(
         program,
         activation_kernel_path,
         all_cores,
         DataMovementConfig{
-            .processor = DataMovementProcessor::RISCV_1,
-            .noc = NOC::RISCV_1_default,
+            .processor = DataMovementProcessor::RISCV_0,
+            .noc = NOC::RISCV_0_default,
             .compile_args = activation_kernel_compile_args
         }
     );
 
+    // auto compute_id = CreateKernel(
+    //     program,
+    //     compute_kernel_path,
+    //     all_cores,
+    //     ComputeConfig{
+    //         .math_fidelity = math_fidelity,
+    //         .fp32_dest_acc_en = fp32_dest_acc_en,
+    //         .compile_args = compute_kernel_args,
+    //         .defines = compute_defines});
 
+    log_debug(LogOp, "Act MCast Start {},{}",act_mcast_start.x,act_mcast_start.y);
+    log_debug(LogOp, "Act MCast End {},{}",act_mcast_end.x,act_mcast_end.y);
+
+    for(uint32_t core_index = 0; core_index < total_num_cores; core_index++)
+    {
+        uint32_t core_x = core_index % num_cores_x;
+        uint32_t core_y = core_index / num_cores_x;
+        SetRuntimeArgs(program,act_kernel_id,CoreCoord(core_x,core_y),{
+            core_x,
+            core_y
+        });
+    }
 
     auto empty_callback = [](
             const void* operation,

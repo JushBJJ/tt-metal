@@ -5,7 +5,7 @@
 
 #include "ttnn/core.hpp"
 #include "ttnn/types.hpp"
-#include "tensor/tensor.hpp"
+#include "ttnn/tensor/tensor.hpp"
 
 namespace tt{
     namespace tt_metal{
