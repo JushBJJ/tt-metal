@@ -138,13 +138,29 @@ std::vector<std::vector<uint32_t>> compute_worker_receiver_num_transfers(
 // For linear all-gather though, we must ensure we send full tensors in BOTH directions
 //   (in other words, disable the "bidirectional" send flag)
 operation::ProgramWithCallbacks all_gather_multi_core_with_workers(const Tensor& input_tensor, Tensor& output_tensor, const uint32_t dim, const uint32_t num_links, const uint32_t ring_size, const uint32_t ring_index, const std::optional<chip_id_t> receiver_device_id, const std::optional<chip_id_t> sender_device_id, all_gather_op::Topology topology) {
+
+    tt::tt_metal::Program program{};
+    return all_gather_multi_core_with_workers_helper(program, input_tensor, output_tensor, dim, num_links, ring_size, ring_index, receiver_device_id, sender_device_id, topology);
+}
+
+operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
+    tt::tt_metal::Program& program,
+    const Tensor& input_tensor,
+    Tensor& output_tensor,
+    const uint32_t dim,
+    const uint32_t num_links,
+    const uint32_t ring_size,
+    const uint32_t ring_index,
+    const std::optional<chip_id_t> receiver_device_id,
+    const std::optional<chip_id_t> sender_device_id,
+    all_gather_op::Topology topology) {
+
     TT_FATAL(!(receiver_device_id == std::nullopt && sender_device_id == std::nullopt), "At least one of receiver_device_id or sender_device_id must be specified");
 
     bool is_linear = topology == all_gather_op::Topology::Linear;
     std::unique_ptr<ccl::CclOpTensorConfig> input_tensor_config = ttnn::ccl::CclOpTensorConfig::build_all_gather_tensor_config(input_tensor);
     std::unique_ptr<ccl::CclOpTensorConfig> output_tensor_config = ttnn::ccl::CclOpTensorConfig::build_all_gather_tensor_config(output_tensor);
 
-    tt::tt_metal::Program program{};
     const auto& device = input_tensor.device();
     auto const& all_gather_config = AllGatherConfig(input_tensor, output_tensor, dim, ring_size, num_links, topology);
     auto const& topology_config = ttnn::ccl::RingTopology(device, topology, sender_device_id, receiver_device_id, num_links, ring_size, ring_index);

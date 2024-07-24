@@ -154,6 +154,17 @@ def run_all_gather_on_t3000_impl(
             compute_kernel_config=compute_kernel_config,
         )
 
+        # Test ttnn all_gather_matmul
+        tt_all_gather_out_tensor, _ = ttnn.all_gather_matmul(
+            input_tensor_mesh,
+            weight_tt,
+            dim,
+            num_links=num_links,
+            memory_config=mem_config,
+            program_config=program_config,
+            compute_kernel_config=compute_kernel_config,
+        )
+
         logger.info(f"Done iteration {i}")
 
     print("Checking outputs for All Gather")
@@ -173,6 +184,18 @@ def run_all_gather_on_t3000_impl(
         tt_output_tensor = t.cpu().to(ttl.tensor.Layout.ROW_MAJOR).to_torch()
 
         eq, output = comp_pcc(tt_output_tensor, matmul_output[i])
+        logger.info(f"Output {i}: {output}")
+        if not eq:
+            logger.error(f"output mismatch for tensor {i}")
+        assert eq, f"{i} FAILED: {output}"
+
+    print("Checking outputs for All Gather Matmul (All Gather)")
+    for i, t in enumerate(ttnn.get_device_tensors(tt_all_gather_out_tensor)):
+        tt_output_tensor = t.cpu().to(ttl.tensor.Layout.ROW_MAJOR).to_torch()
+        if input_dtype == ttl.tensor.DataType.BFLOAT16:
+            eq, output = comp_equal(tt_output_tensor, input_tensor)
+        else:
+            eq, output = comp_pcc(tt_output_tensor, input_tensor)
         logger.info(f"Output {i}: {output}")
         if not eq:
             logger.error(f"output mismatch for tensor {i}")

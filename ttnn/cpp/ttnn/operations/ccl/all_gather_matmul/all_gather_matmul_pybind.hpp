@@ -31,14 +31,14 @@ void bind_all_gather_matmul(py::module& module, const ccl_operation_t& operation
                const ttnn::Tensor& weight_tensor,
                const uint32_t dim,
                const uint32_t num_links,
-               const std::optional<ttnn::MemoryConfig>& memory_config
+               const std::optional<ttnn::MemoryConfig>& memory_config = ttnn::DRAM_MEMORY_CONFIG,
                const bool transpose_a = false,
                const bool transpose_b = false,
-               const std::optional<const DataType> dtype,
-               const std::optional<const ttnn::MatmulProgramConfig> program_config,
-               const std::optional<const std::string>& activation,
-               const std::optional<const DeviceComputeKernelConfig> compute_kernel_config,
-               const std::optional<const ttnn::CoreGrid> core_grid) -> ttnn::Tensor {
+               const std::optional<const DataType> dtype = std::nullopt,
+               const std::optional<const tt::operations::primary::MatmulProgramConfig> program_config = std::nullopt,
+               const std::optional<const std::string>& activation = std::nullopt,
+               const std::optional<const DeviceComputeKernelConfig> compute_kernel_config = std::nullopt,
+               const std::optional<const ttnn::CoreGrid> core_grid = std::nullopt) -> std::vector<ttnn::Tensor> {
                 return self(input_tensor, weight_tensor, dim, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid);
             },
             py::arg("input_tensor"),
@@ -46,7 +46,7 @@ void bind_all_gather_matmul(py::module& module, const ccl_operation_t& operation
             py::arg("dim"),
             py::kw_only(),
             py::arg("num_links") = 1,
-            py::arg("memory_config") = std::nullopt
+            py::arg("memory_config") = std::nullopt,
             py::arg("transpose_a") = false,
             py::arg("transpose_b") = false,
             py::arg("dtype") = std::nullopt,

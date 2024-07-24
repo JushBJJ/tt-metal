@@ -14,114 +14,82 @@
 
 #include "ttnn/operations/ccl/all_gather_matmul/device/all_gather_matmul_op.hpp"
 
+/* All Gather Matmul fusion includes */
+#include "ttnn/cpp/ttnn/operations/ccl/all_gather/device/all_gather_op.hpp"
+#include "ttnn/cpp/ttnn/operations/matmul/device/matmul_op.hpp"
+#include "ttnn/cpp/ttnn/operations/matmul/matmul.hpp"
 
 namespace ttnn {
 
-void AllGather::validate(const std::vector<Tensor> &input_tensors) const {
-    TT_FATAL(input_tensors.size() == 1);
-    const auto& input_tensor = input_tensors[0];
-    const auto& layout = input_tensors[0].get_layout();
-    const auto& dtype = input_tensors[0].get_dtype();
-    const auto& page_size = input_tensors[0].buffer()->page_size();
-    TT_FATAL(page_size % input_tensors[0].buffer()->alignment() == 0, "All Gather currently requires aligned pages");
+void AllGatherMatmul::validate(const std::vector<Tensor> &input_tensors, const std::vector<std::optional<const ttnn::Tensor>>& optional_input_tensors) const {
 
-    // TODO: This can be removed by passing two page sizes, actual and aligned to be used for address offsets
-    // Buffer sizes also need to take this aligned page size into consideration
-    // TODO: Validate ring
-    TT_FATAL(input_tensor.storage_type() == StorageType::DEVICE, "Operands to all_gather need to be on device!");
-    TT_FATAL(input_tensor.buffer() != nullptr , "Operands to all_gather need to be allocated in buffers on device!");
-    TT_FATAL(this->num_links > 0);
-    TT_FATAL(this->num_links <= input_tensor.device()->compute_with_storage_grid_size().y, "Worker cores used by links are parallelizaed over rows");
-    TT_FATAL(this->receiver_device_id.has_value() || this->sender_device_id.has_value());
-    if (this->receiver_device_id == this->sender_device_id) {
-        TT_FATAL(input_tensor.device()->get_ethernet_sockets(this->receiver_device_id.value()).size() >= 2 * this->num_links, "2 Device all gather requires at least 2 eth connections per link");
-    } else {
-        TT_FATAL(this->topology == all_gather_op::Topology::Linear || (this->receiver_device_id.has_value() && input_tensor.device()->get_ethernet_sockets(this->receiver_device_id.value()).size() >= this->num_links), "All gather requires at least 1 eth connection per link between sender device {} and receiver device {}", this->sender_device_id, this->receiver_device_id);
-        TT_FATAL(this->topology == all_gather_op::Topology::Linear || (this->sender_device_id.has_value() &&input_tensor.device()->get_ethernet_sockets(this->sender_device_id.value()).size() >= this->num_links), "All gather requires at least 1 eth connection per link between sender device {} and receiver device {}", this->sender_device_id, this->receiver_device_id);
-    }
+    // All Gather validate
+    this->all_gather_struct.validate({input_tensors.at(0)});
 
-    TT_FATAL(input_tensor.memory_config().memory_layout == TensorMemoryLayout::INTERLEAVED ||
-        input_tensor.memory_config().memory_layout == TensorMemoryLayout::WIDTH_SHARDED ||
-        input_tensor.memory_config().memory_layout == TensorMemoryLayout::HEIGHT_SHARDED);
-
-    // Sharding Config checks
-    bool input_sharded = input_tensor.is_sharded();
-    if (input_sharded) {
-        // TODO(snijjar)
-    }
+    // Matmul validate.
+    this->matmul_struct.validate({input_tensors.at(1), input_tensors.at(2)}, optional_input_tensors);
 }
 
-std::vector<tt::tt_metal::Shape> AllGather::compute_output_shapes(const std::vector<Tensor> &input_tensors) const {
-    auto shape = input_tensors[0].get_legacy_shape();
-    shape[this->dim] *= this->ring_size;
-    return std::vector<tt::tt_metal::Shape>(input_tensors.size(), shape);
+std::vector<tt::tt_metal::Shape> AllGatherMatmul::compute_output_shapes(const std::vector<Tensor> &input_tensors) const {
+
+    // All Gather shape
+    tt::tt_metal::Shape all_gather_output_shape = this->all_gather_struct.compute_output_shapes({input_tensors.at(0)}).at(0);
+
+    // Matmul shape
+    tt::tt_metal::Shape matmul_output_shapes = this->matmul_struct.compute_output_shapes({input_tensors.at(1), input_tensors.at(2)}).at(0);
+
+    return {all_gather_output_shape, matmul_output_shapes};
 }
 
-std::vector<Tensor> AllGather::create_output_tensors(const std::vector<Tensor> &input_tensors) const {
-    const auto& input_tensor = input_tensors[0];
-    if(this->output_mem_config.is_sharded()) {
-        return {create_device_tensor(
-            this->compute_output_shapes(input_tensors).at(0),
-            input_tensor.get_dtype(),
-            input_tensor.get_layout(),
-            input_tensor.device(),
-            this->output_mem_config
-            )};
-    } else {
-        return operation::generic_create_output_tensors(*this, input_tensors, input_tensor.get_dtype(), input_tensor.get_layout(), this->output_mem_config);
-    }
+std::vector<Tensor> AllGatherMatmul::create_output_tensors(const std::vector<Tensor> &input_tensors) const {
+
+    // All Gather output tensor
+    auto& all_gather_output_tensor = input_tensors.at(1); // this->all_gather_out_tensor = this->all_gather_struct.create_output_tensors(input_tensors).at(0);
+
+    // Matmul output tensor
+    ttnn::Tensor matmul_output_tensor = this->matmul_struct.create_output_tensors({input_tensors.at(1), input_tensors.at(2)}).at(0);
+
+    return {all_gather_output_tensor, matmul_output_tensor};
 }
 
-operation::ProgramWithCallbacks AllGather::create_program(const std::vector<Tensor> & input_tensors, std::vector<Tensor> &output_tensors) const {
-    AllGatherMode all_gather_mode = choose_all_gather_mode(input_tensors.at(0), output_tensors.at(0), dim);
-    switch (all_gather_mode) {
-        case AllGatherMode::RING_INTERLEAVED:
-        case AllGatherMode::SINGLE_TILE_HIGH_WIDTH_SHARDED:
-            return all_gather_multi_core_with_workers(input_tensors[0], output_tensors[0], this->dim, this->num_links, this->ring_size, this->ring_index, this->receiver_device_id, this->sender_device_id, this->topology);
-        break;
-        case AllGatherMode::FULL_WORKER_GRID_SHARDED:
-            TT_THROW("Unsupported AllGatherMode");
-        break;
-        default:
-            TT_THROW("Unsupported AllGatherMode");
-    };
+operation::ProgramWithCallbacks AllGatherMatmul::create_program(const std::vector<Tensor> & input_tensors, const std::vector<std::optional<const ttnn::Tensor>>& optional_input_tensors, std::vector<Tensor> &output_tensors) const {
+
+    // Return the AllGatherMatmul program with callbacks
+    return all_gather_struct.create_program({input_tensors.at(0)}, output_tensors);
+
 }
 
 namespace operations {
 namespace ccl {
 
-std::tuple <Tensor, Tensor> all_gather_matmul(
-    const Tensor& input_tensor,
-    const Tensor& weight_tensor,
-
+std::vector <ttnn::Tensor> all_gather_matmul(
+    const ttnn::Tensor& input_tensor,
+    const ttnn::Tensor& weight_tensor,
     const uint32_t dim,
-    const uint32_t num_links = 1,
-    const std::optional<MemoryConfig>& memory_config = std::nullopt,
-
-    std::optional<const Tensor> bias = std::nullopt,
-
-    const struct AllGatherMatmul& parametrs = AllGatherMatmul{}
+    const uint32_t num_links,
+    const std::optional<MemoryConfig>& memory_config,
+    const bool transpose_a,
+    const bool transpose_b,
+    const std::optional<const DataType> dtype,
+    const std::optional<const tt::operations::primary::MatmulProgramConfig> program_config,
+    const std::optional<const std::string>& activation,
+    const std::optional<const DeviceComputeKernelConfig> compute_kernel_config,
+    const std::optional<const ttnn::CoreGrid> core_grid
 ) {
 
     TT_FATAL(std::getenv("TT_METAL_SLOW_DISPATCH_MODE") == nullptr, "This op is only supported for Fast Dispatch");
 
     auto devices = input_tensor.get_workers();
-    std::vector<Tensor> output_tensors;  // Should be size 2: One for all_gather and one for matmul
+    std::vector<Tensor> output_tensors = {ttnn::Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor})),
+                                            ttnn::Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor}))};
+    std::vector<std::optional<const ttnn::Tensor>> optional_input_tensors = {std::nullopt};
 
-    std::vector<std::optional<const Tensor>> optional_input_tensors = {};
-
-    if (bias.has_value()) {
-        optional_input_tensors.push_back(bias.value());
-        output_tensors = {Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor}, {bias.value()})), Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor}, {bias.value()}));
-    } else {
-        optional_input_tensors.push_back(std::nullopt);
-        output_tensors = {Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor})), Tensor(operation::get_workers_for_op_output({input_tensor, weight_tensor}));
-    }
 
     operation::launch_op(
-        [dim, num_links, memory_config, parameters, devices](
+        [dim, num_links, memory_config, transpose_a, transpose_b, dtype, program_config, activation, compute_kernel_config, core_grid, devices](
             const std::vector<Tensor>& input_tensors,
-            const std::vector<std::optional<const Tensor>>& optional_input_tensors) mutable -> std::vector<Tensor> {
+            const std::vector<std::optional<const ttnn::Tensor>>& optional_input_tensors,
+            const std::vector<std::optional<Tensor>>& optional_output_tensors) mutable -> std::vector<Tensor> {
 
             const auto& input_tensor = input_tensors.at(0);
             const auto& weight_tensor = input_tensors.at(1);
@@ -141,25 +109,42 @@ std::tuple <Tensor, Tensor> all_gather_matmul(
                 }
             }
 
+            ttnn::AllGather all_gather_struct{
+                dim, num_links, num_devices, device_index, receiver_device_id, sender_device_id, memory_config.value_or(input_tensor.memory_config())};
+
+
             /* Matmul stuff */
             auto arch = input_tensor.device()->arch();
-            const bool has_user_grid = parameters.user_core_coord.has_value();
-            const bool has_program_config = parameters.program_config.has_value();
+            const bool has_user_grid = core_grid.has_value();
+            const bool has_program_config = program_config.has_value();
             const auto increase_fidelity = !has_program_config && !has_user_grid;
             auto math_fidelity = increase_fidelity ? MathFidelity::HiFi2 : MathFidelity::LoFi;
-            auto kernel_config_val = init_device_compute_kernel_config(arch, parameters.compute_kernel_config, math_fidelity);
-            bool broadcast_batch = parameters.bcast_batch.value_or(get_broadcast_batch(input_tensor, weight_tensor, parameters.program_config));
+            auto kernel_config_val = init_device_compute_kernel_config(arch, compute_kernel_config, math_fidelity);
+            bool broadcast_batch = get_broadcast_batch(input_tensor, weight_tensor, program_config);
+            bool user_run_batched = ttnn::operations::matmul::detail::is_input_batched(weight_tensor.get_shape());
             TT_FATAL(!(has_user_grid && has_program_config), "Cannot use both user core grid/coordinates and a program config");
+            std::optional<CoreCoord> user_core_coord;
+            if (core_grid.has_value()) {
+                user_core_coord = CoreCoord(core_grid->x, core_grid->y);
+            }
 
+            tt::operations::primary::Matmul matmul_struct{
+                program_config, broadcast_batch, memory_config.value_or(input_tensor.memory_config()), dtype.value_or(input_tensor.get_dtype()), compute_kernel_config,
+                /*untilize_out=*/false, user_core_coord, ttnn::operations::matmul::get_fused_activation(activation),
+                user_run_batched, transpose_a, transpose_b
+            };
+
+
+            /* Create the dummy all gather output tensor used as input (activation) to the matmul */
+            ttnn::Tensor all_gather_out_tensor = all_gather_struct.create_output_tensors({input_tensor}).at(0);
 
             return operation::run(
-                ttnn::AllGather{
+                ttnn::AllGatherMatmul{
                     /* All Gather Params */
-                    dim, num_links, num_devices, device_index, receiver_device_id, sender_device_id, memory_config.value_or(input_tensor.memory_config()), all_gather_op::Topology::Ring,
+                    all_gather_struct,
                     /* Matmul params */
-                    parameters.program_config, broadcast_batch, parameters.mm_output_dtype.value_or(input_tensor.get_dtype()),
-                    kernel_config_val, parameters.untilize_out, parameters.user_core_coord, parameters.user_fused_activation, parameters.user_run_batched},
-                {input_tensor, weight_tensor}, optional_input_tensors);
+                    matmul_struct},
+                {input_tensor, all_gather_out_tensor, weight_tensor}, optional_input_tensors);
         },
         {input_tensor, weight_tensor}, output_tensors, optional_input_tensors);
     return {output_tensors.at(0), output_tensors.at(1)};
