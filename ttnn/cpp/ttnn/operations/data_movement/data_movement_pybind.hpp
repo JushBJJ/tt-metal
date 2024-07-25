@@ -13,6 +13,7 @@
 #include "ttnn/operations/data_movement/pad/pad_pybind.hpp"
 #include "ttnn/operations/data_movement/permute/permute_pybind.hpp"
 #include "ttnn/operations/data_movement/downsample/downsample_op_pybind.hpp"
+#include "ttnn/operations/data_movement/upsample/upsample_pybind.hpp"
 #include "ttnn/operations/data_movement/slice/slice_pybind.hpp"
 #include "ttnn/operations/data_movement/tilize/tilize_pybind.hpp"
 #include "ttnn/operations/data_movement/tilize_with_val_padding/tilize_with_val_padding_pybind.hpp"
@@ -23,7 +24,7 @@ namespace ttnn {
 namespace operations {
 namespace data_movement {
 
-void bind_upsample(py::module& module) {
+/*void bind_upsample(py::module& module) {
     const auto doc = R"doc(
  Upsamples a given multi-channel 2D (spatial) data.
  The input data is assumed to be of the form [N, H, W, C].
@@ -41,7 +42,7 @@ void bind_upsample(py::module& module) {
         doc,
         ttnn::pybind_arguments_t{
             py::arg("input_tensor"), py::arg("scale_factor"), py::arg("memory_config") = std::nullopt});
-}
+}*/
 
 void bind_repeat_interleave(py::module& module) {
     auto doc = R"doc(
@@ -114,7 +115,7 @@ Example:
 void py_module(py::module& module) {
     detail::bind_permute(module);
     detail::bind_concat(module);
-    bind_upsample(module);
+    detail::bind_upsample(module);
     detail::bind_pad(module);
     detail::bind_slice(module);
     detail::bind_downsample(module);
