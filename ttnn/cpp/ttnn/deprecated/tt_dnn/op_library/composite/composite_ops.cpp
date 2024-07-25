@@ -1393,11 +1393,6 @@ Tensor full(
     return tt::numpy::full(shape, value, data_type, layout, device, output_mem_config);
 }
 
-// on-device with increment
-Tensor arange(int32_t start, int32_t end, int32_t step, Device* device, const MemoryConfig& output_mem_config) {
-    return tt::numpy::arange<bfloat16>(start, end, step, Layout::ROW_MAJOR, device, output_mem_config);
-}
-
 /**
  * outer product = matrix multiply when a = [1,1,N,1] and b = [1,1,1,M]
  * and result is of size [1,1,N,M].

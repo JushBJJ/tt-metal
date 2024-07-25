@@ -370,13 +370,6 @@ Tensor ones(
     Device* device = nullptr,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-Tensor arange(
-    int32_t start,
-    int32_t end,
-    int32_t step = 1,
-    Device* device = nullptr,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // on-device tensor creation with shape and filled with value
 Tensor full(
     const Shape shape,

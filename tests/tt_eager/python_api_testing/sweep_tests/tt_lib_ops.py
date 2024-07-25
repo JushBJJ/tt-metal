@@ -1537,7 +1537,7 @@ def arange(
     output_mem_config,
     **kwargs,
 ):
-    t1 = ttl.tensor.arange(
+    t1 = ttnn.arange(
         start,
         end,
         step,
