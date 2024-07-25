@@ -36,7 +36,7 @@ echo "Installing dev dependencies"
 python3 -m pip install -r $(pwd)/tt_metal/python_env/requirements-dev.txt
 
 echo "Installing tt-metal"
-pip install -e .
+python3 -m pip install -e .
 
 echo "Generating git hooks"
 pre-commit install
