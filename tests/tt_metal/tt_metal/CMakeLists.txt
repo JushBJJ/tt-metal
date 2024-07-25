@@ -7,6 +7,7 @@ set (TT_METAL_TESTS
     test_add_two_ints
     # test_compile_args             <- not tested in run_tt_metal.py
     test_eltwise_binary
+    test_dropout
     # test_eltwise_unary            <- not tested in run_tt_metal.py
     test_matmul_single_tile_bfp8b
     test_matmul_single_tile_output_in_l1
