@@ -9,7 +9,7 @@ from transformers.generation.logits_process import LogitsProcessorList
 from typing import List, Optional, Tuple, Union
 import tt_lib
 from models.utility_functions import torch_to_tt_tensor_rm, tt_to_torch_tensor
-import ttnn
+
 
 def linear(x, weight, bias, device):
     weight = tt_to_torch_tensor(weight)
@@ -277,6 +277,6 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
 
 def shape_tt(states, batch_size, seq_len, n_heads, head_dim):
     tt_out = tt_lib.tensor.reshape(states, batch_size, seq_len, n_heads, head_dim)
-    tt_out = ttnn.transpose(tt_out, 1, -2)
+    tt_out = tt_lib.tensor.transpose(tt_out, 1, -2)
 
     return tt_out
