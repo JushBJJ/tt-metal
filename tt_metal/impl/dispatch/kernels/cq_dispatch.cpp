@@ -676,7 +676,7 @@ void process_write_packed_large() {
             }
             uint32_t available_data = cb_fence - data_ptr;
             uint32_t xfer_size = (length > available_data) ? available_data : length;
-
+            xfer_size = xfer_size > NOC_MAX_BURST_SIZE ? NOC_MAX_BURST_SIZE : xfer_size;
             cq_noc_async_write_with_state<CQ_NOC_SnDL>(data_ptr, dst, xfer_size, num_dests);
             writes++;
             mcasts += num_dests;
@@ -1028,7 +1028,7 @@ void kernel_main() {
     uint32_t npages =
         dispatch_cb_pages_per_block - ((block_next_start_addr[rd_block_idx] - cmd_ptr) >> dispatch_cb_log_page_size);
     cb_release_pages<upstream_noc_xy, upstream_dispatch_cb_sem_id>(npages);
-
+    DPRINT << "Wait" <<ENDL();
     // Confirm expected number of pages, spinning here is a leak
     cb_wait_all_pages<my_dispatch_cb_sem_id>(0);
 
