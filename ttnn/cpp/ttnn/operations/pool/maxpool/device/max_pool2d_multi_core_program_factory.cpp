@@ -397,7 +397,7 @@ MaxPoolNew::MultiCore::cached_program_t max_pool_2d_multi_core_sharded_with_halo
         Tensor& output,
         const SlidingWindowConfig& sliding_window_config,
         const MemoryConfig& out_mem_config) {
-    Program program = CreateProgram();
+    tt::tt_metal::Program program{};
 
     ParallelConfig parallel_config = ParallelConfig{
         .grid = input.shard_spec().value().grid,
@@ -457,13 +457,13 @@ MaxPoolNew::MultiCore::cached_program_t max_pool_2d_multi_core_sharded_with_halo
         1);
 }
 
-MaxPoolNew::MultiCore::cached_program_t MaxPoolNew::MultiCore::create(const operation_attributes_t& op_attr, const tensor_args_t& tensor_args, Tensor& output_tensor) {
+MaxPoolNew::MultiCore::cached_program_t MaxPoolNew::MultiCore::create(const operation_attributes_t& op_attr, const tensor_args_t& tensor_args, tensor_return_value_t& output_tensor) {
     const auto& input = tensor_args.input_tensor_;
     return max_pool_2d_multi_core_sharded_with_halo_v2_new(
                     input,
                     output_tensor,
                     op_attr.sliding_window_config_,
-                    op_attr.out_mem_config_);
+                    op_attr.memory_config_);
 }
 
 void MaxPoolNew::MultiCore::override_runtime_arguments(cached_program_t& cached_program,

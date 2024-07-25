@@ -56,6 +56,10 @@ namespace tt::tt_metal {
                 has_parallel_config_ = num_cores_nhw_ > 0 && !core_range_set_.ranges().empty();
             }
 
+        SlidingWindowConfig(const SlidingWindowConfig& other): batch_size_(other.batch_size_), input_hw_(other.input_hw_), window_hw_(other.window_hw_), stride_hw_(other.stride_hw_), pad_hw_(other.pad_hw_), dilation_hw_(other.dilation_hw_), has_parallel_config_(other.has_parallel_config_), num_cores_nhw_(other.num_cores_nhw_), core_range_set_(other.core_range_set_), snap_to_tile_(other.snap_to_tile_) {}
+
+        SlidingWindowConfig(): core_range_set_({{{0,0}, {0,0}}}) {}
+
         /**
          * Unique hash val for the sliding window configuration.
          */

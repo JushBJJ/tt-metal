@@ -26,11 +26,11 @@ MaxPoolNew::program_factory_t MaxPoolNew::select_program_factory(const operation
 }
 
 void MaxPoolNew::validate_on_program_cache_miss(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
-    return validate(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.out_mem_config_);
+    return validate(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.memory_config_);
 }
 
 void MaxPoolNew::validate_on_program_cache_hit(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
-    return validate(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.out_mem_config_);
+    return validate(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.memory_config_);
 }
 
 void MaxPoolNew::validate(const Tensor& input, const tt::tt_metal::SlidingWindowConfig& sliding_window_config, const MemoryConfig& out_mem_config) {
@@ -51,11 +51,11 @@ void MaxPoolNew::validate(const Tensor& input, const tt::tt_metal::SlidingWindow
     TT_FATAL(out_mem_config.memory_layout == TensorMemoryLayout::HEIGHT_SHARDED, "Only height sharded tensors are supported.");
 }
 
-Shape MaxPoolNew::compute_output_shapes(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
-    return compute_output_shapes(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.out_mem_config_).at(0);
+MaxPoolNew::shape_return_value_t MaxPoolNew::compute_output_shapes(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
+    return compute_output_shapes(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.memory_config_);
 }
 
-std::vector<Shape> MaxPoolNew::compute_output_shapes(const Tensor& input, const tt::tt_metal::SlidingWindowConfig& sliding_window_config, const MemoryConfig& out_mem_config) {
+MaxPoolNew::shape_return_value_t MaxPoolNew::compute_output_shapes(const Tensor& input, const tt::tt_metal::SlidingWindowConfig& sliding_window_config, const MemoryConfig& out_mem_config) {
     // NOTE: Only for RM
     // NOTE2: Assuming { N, 1, H * W, C }
     // NOTE3: Assuming output data type is same as input
@@ -78,15 +78,15 @@ std::vector<Shape> MaxPoolNew::compute_output_shapes(const Tensor& input, const 
         {{0, 0}, {0, 0}, {0, out_nhw_padded - out_nhw}, {0, out_c_padded - out_c}},
         Padding::PadValue::NegativeInfinity);
     auto out_shape = Shape(tt::tt_metal::Shape(out_dims, padding));
-    return {out_shape};
+    return out_shape;
 }
 
-Tensor MaxPoolNew::create_output_tensors(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
-    return create_output_tensors(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.out_mem_config_).at(0);
+MaxPoolNew::tensor_return_value_t MaxPoolNew::create_output_tensors(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
+    return create_output_tensors(tensors.input_tensor_, op_attr.sliding_window_config_, op_attr.memory_config_);
 }
 
-std::vector<Tensor> MaxPoolNew::create_output_tensors(const Tensor &input, const tt::tt_metal::SlidingWindowConfig& sliding_window_config, const MemoryConfig& out_mem_config) {
-    Shape output_shape = compute_output_shapes(input, sliding_window_config, out_mem_config).at(0);
+MaxPoolNew::tensor_return_value_t MaxPoolNew::create_output_tensors(const Tensor &input, const tt::tt_metal::SlidingWindowConfig& sliding_window_config, const MemoryConfig& out_mem_config) {
+    Shape output_shape = compute_output_shapes(input, sliding_window_config, out_mem_config);
     auto mem_config = out_mem_config;
     if (mem_config.shard_spec.has_value()) {
         mem_config.shard_spec->shape[1] = output_shape[3];
@@ -101,8 +101,18 @@ std::vector<Tensor> MaxPoolNew::create_output_tensors(const Tensor &input, const
         mem_config.shard_spec = ShardSpec{shard_grid, shard_shape, ShardOrientation::ROW_MAJOR, false};
     }
 
-    return {create_device_tensor(output_shape, input.get_dtype(), input.get_layout(), input.device(), mem_config)};
+    return create_device_tensor(output_shape, input.get_dtype(), input.get_layout(), input.device(), mem_config);
 }
+
+tt::stl::hash::hash_t MaxPoolNew::compute_program_hash(const operation_attributes_t& op_attr, const tensor_args_t& tensors) {
+    // TT_ASSERT(std::holds_alternative<DeviceStorage>(input_tensor.storage()), fmt::format("Unexpected type {} in {}:{} ",tt::stl::get_active_type_name_in_variant(input_tensor.get_storage()),__FILE__, __LINE__));
+    // auto input_mem_config = std::get<DeviceStorage>(input_tensor.storage()).memory_config();
+    auto input_mem_config = tensors.input_tensor_.memory_config();
+    auto dtype = tensors.input_tensor_.dtype();
+    return operation::hash_operation<MaxPoolNew>(op_attr.sliding_window_config_.get_hash(), op_attr.memory_config_, input_mem_config, dtype);
+
+}
+
 
 operation::OpPerformanceModel MaxPoolNew::create_op_performance_model(const operation_attributes_t& op_attr, const tensor_args_t& inputs, const Tensor& output) {
     const auto& input = inputs.input_tensor_;

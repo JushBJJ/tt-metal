@@ -49,7 +49,7 @@ void bind_max_pool2d_operation(py::module& module) {
                 std::array<uint32_t, 2> stride,
                 std::array<uint32_t, 2> padding,
                 std::array<uint32_t, 2> dilation,
-                const ttnn::Device& device,
+                ttnn::Device& device,
                 const uint8_t& queue_id)
                 -> ttnn::Tensor { return self(queue_id,
                                             input_tensor,
@@ -76,6 +76,6 @@ void bind_max_pool2d_operation(py::module& module) {
                 py::arg("queue_id") = 0});
 }
 
-void py_module(py::module& module) { bind_example_operation(module); }
+// void py_module(py::module& module) { bind_example_operation(module); }
 
 }  // namespace ttnn::operations::pool

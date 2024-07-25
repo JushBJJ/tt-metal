@@ -9,6 +9,7 @@
 
 #include "ttnn/cpp/pybind11/decorators.hpp"
 #include "ttnn/operations/pool/maxpool/max_pool.hpp"
+#include "max_pool2d_pybind.hpp"
 
 #include "ttnn/types.hpp"
 
@@ -99,6 +100,8 @@ void py_module(py::module& module) {
         | memory_config     | output tensor memory config   | MemoryConfig  |             | No       |
         +-------------------+-------------------------------+---------------+-------------+----------+
     )doc");
+
+    bind_max_pool2d_operation(module);
 }
 
 

@@ -15,7 +15,7 @@ import ttnn
 ## NOTE: this is the new C++ TTNN version
 
 
-@pytest.mark.skip("This is based on the new version of ttnn maxpool c++, which needs to be debugged first.")
+##@pytest.mark.skip("This is based on the new version of ttnn maxpool c++, which needs to be debugged first.")
 @pytest.mark.parametrize("device_params", [{"l1_small_size": 24576}], indirect=True)
 @pytest.mark.parametrize(
     "act_shape",  ## NCHW
@@ -156,16 +156,16 @@ def test_run_max_pool(
         ttact = ttnn.from_torch(act_reshaped, dtype)
 
     ttact_device = ttnn.to_device(ttact, device)
-    output = ttnn.maxpool2d(
+    output = ttnn.max_pool2d_new(
         input_tensor=ttact_device,
         batch_size=in_n,
-        input_height=in_h,
-        input_width=in_w,
+        input_h=in_h,
+        input_w=in_w,
         channels=in_c,
-        kernel_size=(kernel_h, kernel_w),
-        stride=(stride_h, stride_w),
-        padding=(pad_h, pad_w),
-        dilation=(dilation_h, dilation_w),
+        kernel_size=[kernel_h, kernel_w],
+        stride=[stride_h, stride_w],
+        padding=[pad_h, pad_w],
+        dilation=[dilation_h, dilation_w],
         device=device,
     )
     output_host = ttnn.from_device(output)
