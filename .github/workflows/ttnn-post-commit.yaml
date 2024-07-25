@@ -29,14 +29,12 @@ jobs:
       - name: Set up dynamic env vars for build
         run: |
           echo "TT_METAL_HOME=$(pwd)" >> $GITHUB_ENV
-      - name: Download custom artifact
-        shell: bash
-        run: |
-          mkdir -p gh_artifacts
-          cd gh_artifacts
-          gh run download 10100630704 --pattern TTMetal_build*
-          cd ..
-          tar -xvf gh_artifacts/TTMetal_build_grayskull/ttm_${{ matrix.arch }}.tar
+      - uses: actions/download-artifact@v4
+        with:
+          name: TTMetal_build_${{ matrix.runner-info.arch }}
+          run-id: 10100630704
+      - name: Extract files
+        run: tar -xvf ttm_${{ matrix.runner-info.arch }}.tar
       - uses: ./.github/actions/install-python-deps
       - name: Set ttnn fast runtime if exists in config
         if: ${{ matrix.test-group.fast_runtime_mode_off }}
