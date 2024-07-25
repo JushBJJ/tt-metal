@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "[Info] Showing root"
+ls -hal
 echo "[Info] Showing ttnn"
 ls -hal ttnn
 echo "[Info] Showing site-packages"
