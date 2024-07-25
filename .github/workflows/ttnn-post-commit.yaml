@@ -36,8 +36,7 @@ jobs:
           run-id: 10100630704
       - name: Extract files
         run: tar -xvf ttm_${{ matrix.runner-info.arch }}.tar
-      - name: Run create_venv
-        run: ./create_venv.sh
+      - uses: ./.github/actions/install-python-deps
       - name: Set ttnn fast runtime if exists in config
         if: ${{ matrix.test-group.fast_runtime_mode_off }}
         run: |
