@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <optional>
+#include <variant>
+
 #include "ttnn/core.hpp"
 #include "ttnn/types.hpp"
 #include "ttnn/tensor/tensor.hpp"

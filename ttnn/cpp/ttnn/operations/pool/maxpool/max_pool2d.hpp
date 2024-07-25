@@ -24,7 +24,7 @@ namespace operations::pool {
 
 struct MaxPoolNewOp {
 
-    static Tensor execute_on_worker_thread(uint8_t queue_id, const Tensor& input_tensor, uint32_t batch_size, uint32_t input_h, uint32_t input_w, uint32_t channels, std::array<uint32_t, 2> kernel_size, std::array<uint32_t, 2> stride, std::array<uint32_t, 2> padding, std::array<uint32_t, 2> dilation, Device& device) {
+    static Tensor operator()(uint8_t queue_id, const Tensor& input_tensor, uint32_t batch_size, uint32_t input_h, uint32_t input_w, uint32_t channels, std::array<uint32_t, 2> kernel_size, std::array<uint32_t, 2> stride, std::array<uint32_t, 2> padding, std::array<uint32_t, 2> dilation, Device& device) {
         MemoryConfig memory_config = input_tensor.memory_config();
         const auto shard_grid = memory_config.shard_spec.value().grid;
         const auto shard_scheme = memory_config.memory_layout;
@@ -56,6 +56,7 @@ struct MaxPoolNewOp {
         // call the halo uop
         uint32_t neg_inf_pad_val = 0xf7ff;
         auto haloed_tensor = ttnn::operations::halo::halo_op(input_tensor, sliding_window_config, neg_inf_pad_val, false, parallel_config.shard_orientation == ShardOrientation::COL_MAJOR, 0, memory_config);
+
         // and then call the maxpool uop
         return ttnn::device_operation::run<MaxPoolNew>(
             queue_id,
