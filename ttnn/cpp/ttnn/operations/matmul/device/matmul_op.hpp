@@ -5,6 +5,7 @@
 #pragma once
 #include <optional>
 
+#include "tt_metal/common/constants.hpp"
 #include "ttnn/tensor/tensor.hpp"
 
 #include "ttnn/operations/eltwise/unary/device/unary_op.hpp"
@@ -31,7 +32,7 @@ operation::ProgramWithCallbacks matmul_multi_core_reuse_padding (const Tensor &i
 operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_padding (const Tensor &input_tensor_a, const Tensor &input_tensor_b, Tensor& output_tensor, bool bcast_batch);
 
 operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_1d_optimized(const Tensor &input_tensor_a, const Tensor &input_tensor_b, const std::optional<const Tensor> bias, Tensor &output_tensor, bool bcast_batch, CoreCoord compute_with_storage_grid_size, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, std::optional<UnaryWithParam> fused_activation, bool mcast_in0, bool untilize_out, bool disable_stagger);
-operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized(const Tensor &input_tensor_a, const Tensor &input_tensor_b, const std::optional<const Tensor> bias, Tensor &output_tensor, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t per_core_M, uint32_t per_core_N, std::optional<UnaryWithParam> fused_activation, bool untilize_out, bool skip_compute, bool skip_in0_mcast, bool skip_write_back, bool disable_stagger);
+operation::ProgramWithCallbacks matmul_multi_core_reuse_dram_sharded_optimized(const Tensor &input_tensor_a, const Tensor &input_tensor_b, const std::optional<const Tensor> bias, Tensor &output_tensor, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t per_core_M, uint32_t per_core_N, std::optional<UnaryWithParam> fused_activation, bool untilize_out, bool skip_compute, bool skip_in0_mcast, bool skip_write_back);
 operation::ProgramWithCallbacks matmul_multi_core_reuse_mcast_2d_optimized(const Tensor &input_tensor_a, const Tensor &input_tensor_b, const std::optional<const Tensor> bias, Tensor &output_tensor, bool bcast_batch, CoreCoord compute_with_storage_grid_size, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool transpose_mcast, std::optional<UnaryWithParam> fused_activation, bool untilize_out, bool disable_stagger);
 operation::ProgramWithCallbacks bmm_multi_core_reuse_optimized(const Tensor& input_tensor_a, const Tensor& input_tensor_b, Tensor &output_tensor, bool bcast_batch, CoreCoord compute_with_storage_grid_size, tt::tt_metal::DataType output_dtype, DeviceComputeKernelConfig compute_kernel_config, uint32_t in0_block_w, uint32_t out_subblock_h, uint32_t out_subblock_w, uint32_t per_core_M, uint32_t per_core_N, bool fuse_batch, bool untilize_out, bool disable_stagger);
 
@@ -91,6 +92,9 @@ struct MatmulMultiCoreReuseProgramConfig {
     std::size_t out_subblock_w;
     std::size_t per_core_M;
     std::size_t per_core_N;
+    // Use this config to disable stagger delay that is enabled by default.
+    // Stagger is applicable only for matmuls with large grid size running on Wormhole B0 to mitigate di/dt problems.
+    // See issue #9857 for more info.
     bool disable_stagger = false;
 };
 
@@ -104,6 +108,9 @@ struct MatmulMultiCoreReuseMultiCastProgramConfig {
     bool transpose_mcast;
     std::optional<UnaryWithParam> fused_activation;
     bool fuse_batch = true;
+    // Use this config to disable stagger delay that is enabled by default.
+    // Stagger is applicable only for matmuls with large grid size running on Wormhole B0 to mitigate di/dt problems.
+    // See issue #9857 for more info.
     bool disable_stagger = false;
 };
 
@@ -117,6 +124,9 @@ struct MatmulMultiCoreReuseMultiCast1DProgramConfig {
     bool fuse_batch;
     std::optional<UnaryWithParam> fused_activation;
     bool mcast_in0;
+    // Use this config to disable stagger delay that is enabled by default.
+    // Stagger is applicable only for matmuls with large grid size running on Wormhole B0 to mitigate di/dt problems.
+    // See issue #9857 for more info.
     bool disable_stagger = false;
 };
 
@@ -125,7 +135,6 @@ struct MatmulMultiCoreReuseMultiCastDRAMShardedProgramConfig {
     std::size_t per_core_M;
     std::size_t per_core_N;
     std::optional<UnaryWithParam> fused_activation;
-    bool disable_stagger = false;
 };
 
 struct MatmulMultiCoreProgramConfig {
@@ -156,6 +165,8 @@ struct Matmul {
     const bool user_run_batched = false;
     const bool transpose_a = false;
     const bool transpose_b = false;
+
+    static const bool disable_stagger_from_env;
 
     void validate(const std::vector<Tensor>& input_tensors, const std::vector<std::optional<const Tensor>>& optional_input_tensors) const;
     std::vector<Shape> compute_output_shapes(const std::vector<Tensor>& input_tensors) const;
@@ -283,4 +294,7 @@ tuple<uint32_t, uint32_t> get_matmul_subblock_params(const uint32_t per_core_M, 
 
 // TODO: Review usage of matmul bool; should probably infer this from batch
 tt::operations::primary::MatmulProgramConfig get_matmul_program_config(const Tensor &input_tensor_a, const Tensor &input_tensor_b, const MemoryConfig &output_mem_config, std::optional<UnaryWithParam> fused_activation = std::nullopt, const bool matmul = false, const std::optional<const CoreCoord> user_core_coord = std::nullopt, std::optional<const DeviceComputeKernelConfig> compute_kernel_config = std::nullopt);
+
+void add_stagger_defines_if_needed(const tt::ARCH arch, const int num_cores, const bool disable_stagger, std::map<string, string>& mm_kernel_defines);
+
 }  // namespace bmm_op_utils
