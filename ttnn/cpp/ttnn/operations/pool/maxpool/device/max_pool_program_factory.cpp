@@ -273,7 +273,7 @@ operation::OpPerformanceModel MaxPool::create_op_performance_model(const std::ve
 /**
  * New maxpool2d implementation that uses the new sliding window infrastructure.
  */
-
+/*
 void MaxPoolNew::validate(const std::vector<Tensor> &input_tensors) const {
     const auto& input = input_tensors.at(0);
     TT_FATAL(input.storage_type() == StorageType::DEVICE, "Operands to reshape need to be on device!");
@@ -395,6 +395,6 @@ Tensor maxpool2d_new(const Tensor &input,
                                                         out_mem_config},
                                              {input}).at(0);
 }
-
+*/
 } // namespace tt_metal
 } // namespace tt

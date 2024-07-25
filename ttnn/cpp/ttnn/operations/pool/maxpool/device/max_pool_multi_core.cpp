@@ -1104,70 +1104,70 @@ operation::ProgramWithCallbacks max_pool_2d_multi_core_sharded_with_halo_v2(
         nblocks);
 }
 
-operation::ProgramWithCallbacks max_pool_2d_multi_core_sharded_with_halo_v2_new(
-    const Tensor& input,
-    Tensor& output,
-    const SlidingWindowConfig& sliding_window_config,
-    const MemoryConfig& out_mem_config) {
-    Program program = CreateProgram();
+// operation::ProgramWithCallbacks max_pool_2d_multi_core_sharded_with_halo_v2_new(
+//     const Tensor& input,
+//     Tensor& output,
+//     const SlidingWindowConfig& sliding_window_config,
+//     const MemoryConfig& out_mem_config) {
+//     Program program = CreateProgram();
 
-    ParallelConfig parallel_config = ParallelConfig{
-        .grid = input.shard_spec().value().grid,
-        .shard_scheme = input.memory_config().memory_layout,
-        .shard_orientation = input.shard_spec().value().orientation,
-    };
+//     ParallelConfig parallel_config = ParallelConfig{
+//         .grid = input.shard_spec().value().grid,
+//         .shard_scheme = input.memory_config().memory_layout,
+//         .shard_orientation = input.shard_spec().value().orientation,
+//     };
 
-    auto output_shape = sliding_window_config.get_output_shape();
-    uint32_t out_h = output_shape[1];
-    uint32_t out_w = output_shape[2];
+//     auto output_shape = sliding_window_config.get_output_shape();
+//     uint32_t out_h = output_shape[1];
+//     uint32_t out_w = output_shape[2];
 
-    bool is_block_sharded = input.memory_config().memory_layout == TensorMemoryLayout::BLOCK_SHARDED;
+//     bool is_block_sharded = input.memory_config().memory_layout == TensorMemoryLayout::BLOCK_SHARDED;
 
-    auto pad_metadata = sliding_window::generate_pad_metadata(sliding_window_config);
-    auto op_trace_metadata = sliding_window::generate_op_trace_metadata(sliding_window_config);
-    auto shard_boundaries = sliding_window::generate_shard_boundaries(sliding_window_config, op_trace_metadata);
-    auto top_left_indices =
-        sliding_window::generate_sliding_window_op_config(op_trace_metadata, shard_boundaries, false, false);
-    auto reader_indices =
-        sliding_window::construct_on_host_config_tensor(top_left_indices, sliding_window_config, parallel_config);
-    auto reader_indices_on_device =
-        sliding_window::move_config_tensor_to_device(reader_indices, parallel_config, is_block_sharded, input.device());
+//     auto pad_metadata = sliding_window::generate_pad_metadata(sliding_window_config);
+//     auto op_trace_metadata = sliding_window::generate_op_trace_metadata(sliding_window_config);
+//     auto shard_boundaries = sliding_window::generate_shard_boundaries(sliding_window_config, op_trace_metadata);
+//     auto top_left_indices =
+//         sliding_window::generate_sliding_window_op_config(op_trace_metadata, shard_boundaries, false, false);
+//     auto reader_indices =
+//         sliding_window::construct_on_host_config_tensor(top_left_indices, sliding_window_config, parallel_config);
+//     auto reader_indices_on_device =
+//         sliding_window::move_config_tensor_to_device(reader_indices, parallel_config, is_block_sharded, input.device());
 
-    detail::AddConfigBuffer(program, reader_indices_on_device.device_buffer());
+//     detail::AddConfigBuffer(program, reader_indices_on_device.device_buffer());
 
-    auto in_n = sliding_window_config.batch_size_;
-    auto in_h = sliding_window_config.input_hw_.first;
-    auto in_w = sliding_window_config.input_hw_.second;
-    auto kernel_size_h = sliding_window_config.window_hw_.first;
-    auto kernel_size_w = sliding_window_config.window_hw_.second;
-    auto stride_h = sliding_window_config.stride_hw_.first;
-    auto stride_w = sliding_window_config.stride_hw_.second;
-    auto pad_h = sliding_window_config.pad_hw_.first;
-    auto pad_w = sliding_window_config.pad_hw_.second;
-    auto dilation_h = sliding_window_config.dilation_hw_.first;
-    auto dilation_w = sliding_window_config.dilation_hw_.second;
+//     auto in_n = sliding_window_config.batch_size_;
+//     auto in_h = sliding_window_config.input_hw_.first;
+//     auto in_w = sliding_window_config.input_hw_.second;
+//     auto kernel_size_h = sliding_window_config.window_hw_.first;
+//     auto kernel_size_w = sliding_window_config.window_hw_.second;
+//     auto stride_h = sliding_window_config.stride_hw_.first;
+//     auto stride_w = sliding_window_config.stride_hw_.second;
+//     auto pad_h = sliding_window_config.pad_hw_.first;
+//     auto pad_w = sliding_window_config.pad_hw_.second;
+//     auto dilation_h = sliding_window_config.dilation_hw_.first;
+//     auto dilation_w = sliding_window_config.dilation_hw_.second;
 
-    return max_pool_2d_multi_core_sharded_with_halo_v2_impl(
-        program,
-        input,
-        reader_indices_on_device,
-        output,
-        in_n,
-        in_h,
-        in_w,
-        out_h,
-        out_w,
-        kernel_size_h,
-        kernel_size_w,
-        stride_h,
-        stride_w,
-        pad_h,
-        pad_w,
-        dilation_h,
-        dilation_w,
-        out_mem_config,
-        1);
-}
+//     return max_pool_2d_multi_core_sharded_with_halo_v2_impl(
+//         program,
+//         input,
+//         reader_indices_on_device,
+//         output,
+//         in_n,
+//         in_h,
+//         in_w,
+//         out_h,
+//         out_w,
+//         kernel_size_h,
+//         kernel_size_w,
+//         stride_h,
+//         stride_w,
+//         pad_h,
+//         pad_w,
+//         dilation_h,
+//         dilation_w,
+//         out_mem_config,
+//         1);
+// }
 
 }  // namespace tt_metal
 }  // namespace tt
