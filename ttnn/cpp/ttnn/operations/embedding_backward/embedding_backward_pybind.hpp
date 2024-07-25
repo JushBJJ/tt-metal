@@ -63,17 +63,17 @@ void py_module(py::module& module) {
         ttnn::pybind_overload_t{
         [] (const OperationType& self,
             const ttnn::Tensor& input_tensor,
-            const ttnn::Tensor& weight,
-            const ttnn::Tensor& output_gradient,
+            const ttnn::Tensor& weight_tensor,
+            const ttnn::Tensor& output_gradient_tensor,
             const std::optional<const DataType> dtype,
             std::optional<ttnn::Tensor> &optional_output_tensor,
             const std::optional<ttnn::MemoryConfig>& memory_config,
             uint8_t queue_id) {
-                return self(queue_id, input_tensor, weight, output_gradient, dtype, memory_config, optional_output_tensor);
+                return self(queue_id, input_tensor, weight_tensor, output_gradient_tensor, dtype, memory_config, optional_output_tensor);
             },
             py::arg("input_tensor").noconvert(),
-            py::arg("weight").noconvert(),
-            py::arg("output_gradient").noconvert(),
+            py::arg("weight_tensor").noconvert(),
+            py::arg("output_gradient_tensor").noconvert(),
             py::kw_only(),
             py::arg("dtype").noconvert() = std::nullopt,
             py::arg("output_tensor").noconvert() = std::nullopt,

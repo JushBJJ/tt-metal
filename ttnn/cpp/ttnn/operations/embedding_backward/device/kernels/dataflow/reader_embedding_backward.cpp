@@ -98,7 +98,7 @@ void kernel_main() {
     const uint32_t tiles_per_core = get_arg_val<uint32_t>(7);
 
     cb_reserve_back(cb_id_in1, 1);
-    uint32_t input_l1_addr = get_write_ptr(cb_id_in1);
+    uint32_t index_l1_addr = get_write_ptr(cb_id_in1);
     uint32_t index_block_size = get_tile_size(cb_id_in1) >> 5;  // we only need 32 elements
     uint32_t mask_l1_addr = get_write_ptr(cb_id_intermed0);
 
@@ -108,17 +108,19 @@ void kernel_main() {
         auto next_index_seq_addr = get_index_noc_address(b);
         uint32_t offset = 0;
         for (uint32_t s = 0; s < seq_tile_len; ++s) {
-            noc_async_read(next_index_seq_addr + offset, input_l1_addr, index_block_size);
+            noc_async_read(next_index_seq_addr + offset, index_l1_addr, index_block_size);
             noc_async_read_barrier();
             offset += index_block_size;
 
             // maps the next chunk of indexes to the corresponding output masks
-            uint32_t chunk_count = process_index_chunk(input_l1_addr, chunk_indexes);
+            uint32_t chunk_count = process_index_chunk(index_l1_addr, chunk_indexes);
+            DPRINT << "chunk_count:" << chunk_count << ENDL();
             for (uint32_t i = 0; i < chunk_count; ++i) {
-                generate_mask(input_l1_addr, chunk_indexes[i], mask_l1_addr);
+                generate_mask(index_l1_addr, chunk_indexes[i], mask_l1_addr);
+                DPRINT << "chunk_index: " << chunk_indexes[i] << ENDL();
 
                 for (uint32_t i = 0; i < INPUT_SIZE; ++i) {
-                    uint32_t idx = get_index(input_l1_addr, i);
+                    uint32_t idx = get_index(index_l1_addr, i);
                     uint32_t msk = get_index(mask_l1_addr, i);
                     DPRINT << i << ": " << idx << " -> " << msk << ENDL();
                 }

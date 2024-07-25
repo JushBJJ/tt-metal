@@ -19,8 +19,8 @@ namespace ttnn::operations::embedding_backward {
 void EmbeddingBackward::validate(const std::vector<Tensor> &input_tensors) const {
     TT_FATAL(input_tensors.size() == 2, "Must have between 2 input tensors");
 
-    const auto &grad_tensor = input_tensors.at(0);
-    const auto &index_tensor = input_tensors.at(1);
+    const auto &index_tensor = input_tensors.at(0);
+    const auto &grad_tensor = input_tensors.at(1);
 
     TT_FATAL(grad_tensor.get_layout() == Layout::TILE);
     TT_FATAL(grad_tensor.get_dtype() == DataType::BFLOAT16);
@@ -54,7 +54,7 @@ void EmbeddingBackward::validate(const std::vector<Tensor> &input_tensors) const
 }
 
 std::vector<tt::tt_metal::Shape> EmbeddingBackward::compute_output_shapes(const std::vector<Tensor> &input_tensors) const {
-    const auto &grad_tensor = input_tensors.at(0);
+    const auto &grad_tensor = input_tensors.at(1);
     auto embedding_dim = grad_tensor.get_legacy_shape()[-1];
 
     tt::tt_metal::Shape output_shape({1, 1, this->num_embeddings, embedding_dim});
@@ -68,10 +68,10 @@ std::vector<Tensor> EmbeddingBackward::create_output_tensors(const std::vector<T
 
 operation::ProgramWithCallbacks EmbeddingBackward::create_program(
     const std::vector<Tensor> &input_tensors, std::vector<Tensor> &output_tensors) const {
-    const auto &grad_tensor = input_tensors.at(0);
-    const auto &index_tensor = input_tensors.at(1);
+    const auto &index_tensor = input_tensors.at(0);
+    const auto &grad_tensor = input_tensors.at(1);
     auto &output_tensor = output_tensors.at(0);
-    return detail::embedding_backward_multi_core(grad_tensor, index_tensor, output_tensor);
+    return detail::embedding_backward_multi_core(index_tensor, grad_tensor, output_tensor);
 }
 
 }  // namespace ttnn::operations::embedding_backward

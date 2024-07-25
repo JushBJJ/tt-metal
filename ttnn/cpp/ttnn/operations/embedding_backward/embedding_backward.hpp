@@ -36,7 +36,7 @@ struct EmbeddingBackwardOperation {
                                   .output_mem_config = memory_config.value_or(output_gradient_tensor_arg.memory_config()),
                                   .output_dtype = dtype.value_or(output_gradient_tensor_arg.get_dtype()),
                                   .num_embeddings = num_embeddings},
-                              {output_gradient_tensor_arg, input_tensor})
+                              {input_tensor, output_gradient_tensor_arg})
                               .at(0);
 
         return input_gradient;

@@ -16,13 +16,13 @@ using namespace tt::constants;
 
 namespace ttnn::operations::embedding_backward::detail {
 
-operation::ProgramWithCallbacks embedding_backward_multi_core(const Tensor &grad_tensor, const Tensor &index_tensor, Tensor &output) {
+operation::ProgramWithCallbacks embedding_backward_multi_core(const Tensor &index_tensor, const Tensor &grad_tensor, Tensor &output) {
     ////////////////////////////////////////////////////////////////////////////
     //                 Buffer Setup
     ////////////////////////////////////////////////////////////////////////////
 
-    tt_metal::Buffer *grad_tensor_buffer = grad_tensor.buffer();
     tt_metal::Buffer *index_tensor_buffer = index_tensor.buffer();
+    tt_metal::Buffer *grad_tensor_buffer = grad_tensor.buffer();
     tt_metal::Buffer *out_buffer = output.buffer();
 
     Device *device = grad_tensor.device();
@@ -98,7 +98,7 @@ operation::ProgramWithCallbacks embedding_backward_multi_core(const Tensor &grad
     bool index_stick_size_is_power_of_two = is_power_of_two_at_least_32(index_page_size);
     uint32_t index_log2_stick_size = index_stick_size_is_power_of_two ? log2(index_page_size) : 0;
 
-    std::vector<uint32_t> reader_comptime_args = {
+    std::vector<uint32_t> reader_compile_time_args = {
         grad_is_dram,
         index_is_dram,
         out_is_dram,
@@ -111,7 +111,7 @@ operation::ProgramWithCallbacks embedding_backward_multi_core(const Tensor &grad
         program,
         "ttnn/cpp/ttnn/operations/embedding_backward/device/kernels/dataflow/reader_embedding_backward.cpp",
         all_cores,
-        tt_metal::ReaderDataMovementConfig(reader_comptime_args));
+        tt_metal::ReaderDataMovementConfig(reader_compile_time_args));
 
     std::vector<uint32_t> reader_runtime_args = {
         grad_tensor_buffer->address(),
