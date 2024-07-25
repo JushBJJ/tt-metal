@@ -5,7 +5,7 @@
 #include "ttnn/deprecated/tt_dnn/op_library/composite/composite_ops.hpp"
 
 #include "ttnn/deprecated/tt_dnn/op_library/auto_format.hpp"
-#include "ttnn/deprecated/tt_dnn/op_library/concat/concat_op.hpp"
+#include "ttnn/operations/data_movement/concat/concat.hpp"
 #include "ttnn/deprecated/tt_dnn/op_library/copy/copy_op.hpp"
 #include "ttnn/deprecated/tt_dnn/op_library/math.hpp"
 #include "ttnn/deprecated/tt_dnn/op_library/optimizer/optimizer_ops.hpp"
@@ -1636,7 +1636,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                     std::vector<Tensor> combined_tensors;
                     for (int cid = 0; cid < repeat; cid++) combined_tensors.emplace_back(max_val);
                     max_val.deallocate();
-                    Tensor concat_out = concat(combined_tensors, dim, output_mem_config);
+                    Tensor concat_out = ttnn::concat(combined_tensors, dim, output_mem_config);
                     // Needed till `max` stops autoformatting output
                     concat_out = ttnn::reshape(concat_out, input_a.get_shape());
                     Tensor cmp_results = ttnn::eq(input_a, concat_out, std::nullopt, output_mem_config);
