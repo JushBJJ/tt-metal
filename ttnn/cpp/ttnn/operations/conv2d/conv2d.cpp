@@ -47,6 +47,9 @@ ParallelConfig determine_parallel_config(
     Device& device,
     ShardOrientation block_shard_orientation,
     bool is_out_tiled) {
+
+    log_debug(LogOp, "determine_parallel_config: height_sharding: {}, batch_size: {}, input_channels: {}, output_height: {}, output_width: {}, output_channels: {}, block_shard_orientation: {}, is_out_tiled: {}", height_sharding, batch_size, input_channels, output_height, output_width, output_channels, block_shard_orientation, is_out_tiled);
+
     uint32_t conv_out_2d_matrix_height = batch_size * output_height * output_width;
     // pad height to 32
     conv_out_2d_matrix_height = round_up(conv_out_2d_matrix_height, 32);
@@ -142,6 +145,9 @@ uint32_t get_num_cores_channels_from_parallel_config(const ParallelConfig& pconf
 
 MemoryConfig create_sharded_memory_config_from_parallel_config(
     const Shape& tensor_shape, ParallelConfig& parallel_config, uint32_t tile_size) {
+
+    log_debug(tt::LogOp, "create_sharded_memory_config_from_parallel_config: tensor_shape: {}, parallel_config: {}, tile_size: {}", tensor_shape, parallel_config, tile_size);
+
     // tensor_shape is [N, H, W, C]
     TT_ASSERT(tensor_shape[0] == 1 && tensor_shape[1] == 1);  // todo: add support for generic non-2d shapes
     uint32_t channels = tensor_shape[3];

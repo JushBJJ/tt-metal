@@ -2,6 +2,8 @@
 
 # SPDX-License-Identifier: Apache-2.0
 
+from loguru import logger
+
 from typing import Tuple, Union, Dict, Optional
 import torch
 import warnings
@@ -394,6 +396,9 @@ def get_grid_size_and_num_cores_nhw_from_core_grid(core_grid, height_sharded):
 
 # internal helper function. not exposed to user.
 def create_sharded_memory_config_from_parallel_config(tensor_shape, parallel_config, tile_size):
+    logger.info(
+        f"py create_sharded_memory_config_from_parallel_config: {tensor_shape}, {parallel_config.num_cores_nhw} {parallel_config.grid_size}, {tile_size}"
+    )
     # tensor_shape is [N, H, W, C]
     assert len(tensor_shape) == 4
     assert tensor_shape[0] == 1 and tensor_shape[1] == 1  # todo: add support for generic non-2d shapes
