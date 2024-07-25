@@ -380,41 +380,19 @@ void process_write_linear(uint32_t num_mcast_dests) {
     uint32_t dst_addr = cmd->write_linear.addr;
     uint32_t length = cmd->write_linear.length;
     uint32_t data_ptr = cmd_ptr + sizeof(CQDispatchCmd);
+    uint32_t xfer_size = (length > dispatch_cb_page_size - 16) ? dispatch_cb_page_size - 16 : length;
     while (length != 0) {
-        uint32_t xfer_size = (length > dispatch_cb_page_size) ? dispatch_cb_page_size : length;
         uint64_t dst = get_noc_addr_helper(dst_noc, dst_addr);
-        // "Reserve" pages for the next write from this block
-        block_noc_writes_to_clear[rd_block_idx]++;
         // Get a page if needed
         if (data_ptr + xfer_size > cb_fence) {
             // Check for block completion
             if (cb_fence == block_next_start_addr[rd_block_idx]) {
-                uint32_t orphan_size = cb_fence - data_ptr;
-                // No more writes from this block. Decrement the number of writes
-                // since they were all accounted for.
-                block_noc_writes_to_clear[rd_block_idx] -= (orphan_size == 0);
                 // Check for dispatch_cb wrap
                 if (rd_block_idx == dispatch_cb_blocks - 1) {
-                    if (orphan_size != 0) {
-                        if constexpr (multicast) {
-                            noc_async_write_multicast<dispatch_cb_page_size>(
-                                data_ptr, dst, orphan_size, num_mcast_dests);
-                        } else {
-                            noc_async_write<dispatch_cb_page_size>(data_ptr, dst, orphan_size);
-                        }
-                        length -= orphan_size;
-                        xfer_size -= orphan_size;
-                        dst_addr += orphan_size;
-                        // All writes from this block have completed.
-                        orphan_size = 0;
-                    }
                     cb_fence = dispatch_cb_base;
                     data_ptr = dispatch_cb_base;
-                    dst = get_noc_addr_helper(dst_noc, dst_addr);
                 }
                 move_rd_to_next_block<dispatch_cb_blocks>(block_noc_writes_to_clear, rd_block_idx);
-                // Next write will be from next block. "Reserve" pages for it.
-                block_noc_writes_to_clear[rd_block_idx] += (orphan_size == 0);
             }
             // Wait for dispatcher to supply a page (this won't go beyond the buffer end)
             uint32_t n_pages = cb_acquire_pages<my_noc_xy, my_dispatch_cb_sem_id, dispatch_cb_log_page_size>(
@@ -435,9 +413,11 @@ void process_write_linear(uint32_t num_mcast_dests) {
         } else {
             noc_async_write<dispatch_cb_page_size>(data_ptr, dst, xfer_size);
         }
+        block_noc_writes_to_clear[rd_block_idx]++;
         length -= xfer_size;
         data_ptr += xfer_size;
         dst_addr += xfer_size;
+        xfer_size = (length > dispatch_cb_page_size) ? dispatch_cb_page_size : length;
     }
     cmd_ptr = data_ptr;
 }
@@ -473,55 +453,32 @@ void process_write_paged() {
     while (write_length != 0) {
         // TODO #7360: Have more performant handling when page_size > dispatch_cb_page_size by not doing multiple writes
         // for one buffer page
-        uint32_t xfer_size =
-            page_size > dispatch_cb_page_size ? min(dispatch_cb_page_size, page_size - dst_addr_offset) : page_size;
-        uint64_t dst = addr_gen.get_noc_addr(
-            page_id, dst_addr_offset);  // XXXX replace this w/ walking the banks to save mul on GS
-        // "Reserve" pages for the next write from this block
-        block_noc_writes_to_clear[rd_block_idx]++;
-        // Get a Dispatch page if needed
-        if (data_ptr + xfer_size > cb_fence) {
-            // Check for block completion
+        if (cb_fence == data_ptr) {
             if (cb_fence == block_next_start_addr[rd_block_idx]) {
-                uint32_t orphan_size = cb_fence - data_ptr;
-                // No more writes from this block. Decrement the number of writes
-                // since they were all accounted for.
-                block_noc_writes_to_clear[rd_block_idx] -= (orphan_size == 0);
-                // Check for dispatch_cb wrap
                 if (rd_block_idx == dispatch_cb_blocks - 1) {
-                    if (orphan_size != 0) {
-                        noc_async_write<dispatch_cb_page_size>(data_ptr, dst, orphan_size);
-                        write_length -= orphan_size;
-                        xfer_size -= orphan_size;
-                        dst_addr_offset += orphan_size;
-                        // All writes from this block have completed.
-                        orphan_size = 0;
-                    }
                     cb_fence = dispatch_cb_base;
                     data_ptr = dispatch_cb_base;
-                    dst = addr_gen.get_noc_addr(page_id, dst_addr_offset);
                 }
                 move_rd_to_next_block<dispatch_cb_blocks>(block_noc_writes_to_clear, rd_block_idx);
-                // Next write will be from next block. "Reserve" pages for it.
-                block_noc_writes_to_clear[rd_block_idx] += (orphan_size == 0);
             }
-
-            // Wait for dispatcher to supply a page (this won't go beyond the buffer end)
             uint32_t n_pages = cb_acquire_pages<my_noc_xy, my_dispatch_cb_sem_id, dispatch_cb_log_page_size>(
                 cb_fence, block_next_start_addr, rd_block_idx);
+
             cb_fence += n_pages * dispatch_cb_page_size;
 
-            // Release pages for prefetcher
-            // Since we gate how much we acquire to < 1/4 the buffer, this should be called enough
             cb_block_release_pages<
                 upstream_noc_xy,
                 upstream_dispatch_cb_sem_id,
                 dispatch_cb_blocks,
                 dispatch_cb_pages_per_block>(block_noc_writes_to_clear, wr_block_idx);
         }
+        uint32_t available_data = cb_fence - data_ptr;
+        uint32_t xfer_size = (page_size - dst_addr_offset) > available_data ? available_data : (page_size - dst_addr_offset);
+        uint64_t dst = addr_gen.get_noc_addr(
+            page_id, dst_addr_offset);  // XXXX replace this w/ walking the banks to save mul on GS
 
         noc_async_write<dispatch_cb_page_size>(data_ptr, dst, xfer_size);
-
+        block_noc_writes_to_clear[rd_block_idx]++;
         // If paged write is not completed for a page (dispatch_cb_page_size < page_size) then add offset, otherwise
         // incr page_id.
         if (dst_addr_offset + xfer_size < page_size) {
@@ -705,52 +662,24 @@ void process_write_packed_large() {
         cq_noc_async_write_with_state<CQ_NOC_sNdl, CQ_NOC_WAIT, CQ_NOC_send>(0, dst);
 
         while (length != 0) {
-            uint32_t xfer_size = (length > dispatch_cb_page_size) ? dispatch_cb_page_size : length;
-            // "Reserve" pages for the next write from this block
-            writes++;
-            mcasts += num_dests;
-            // Get a page if needed
-            if (data_ptr + xfer_size > cb_fence) {
-                // Check for block completion
+            if (data_ptr == cb_fence) {
                 if (cb_fence == block_next_start_addr[rd_block_idx]) {
-                    // No more writes from this block. Decrement the number of writes
-                    // since they were all accounted for.
-                    uint32_t orphan_size = cb_fence - data_ptr;
-                    writes -= (orphan_size == 0);
-                    mcasts -= (orphan_size == 0) * num_dests;
-                    // Check for dispatch_cb wrap
                     if (rd_block_idx == dispatch_cb_blocks - 1) {
-                        ASSERT(cb_fence == dispatch_cb_end);
-                        if (orphan_size != 0) {
-                            cq_noc_async_write_with_state<CQ_NOC_SnDL>(data_ptr, dst, orphan_size, num_dests);
-                            length -= orphan_size;
-                            xfer_size -= orphan_size;
-                            dst_addr += orphan_size;
-                            // All writes from this block have completed.
-                            orphan_size = 0;
-                        }
                         cb_fence = dispatch_cb_base;
                         data_ptr = dispatch_cb_base;
-                        dst = get_noc_addr_helper(dst_noc, dst_addr);
                     }
-
-                    block_noc_writes_to_clear[rd_block_idx] += writes;
-                    noc_nonposted_writes_num_issued[noc_index] += writes;
-                    writes = 0;
                     move_rd_to_next_block<dispatch_cb_blocks>(block_noc_writes_to_clear, rd_block_idx);
-                    // Next write will be from next block. "Reserve" pages for it.
-                    writes += (orphan_size == 0);
-                    mcasts += (orphan_size == 0) * num_dests;
                 }
-
-                // Wait for dispatcher to supply a page (this won't go beyond the buffer end)
                 uint32_t n_pages = cb_acquire_pages<my_noc_xy, my_dispatch_cb_sem_id, dispatch_cb_log_page_size>(
                     cb_fence, block_next_start_addr, rd_block_idx);
                 cb_fence += n_pages * dispatch_cb_page_size;
             }
+            uint32_t available_data = cb_fence - data_ptr;
+            uint32_t xfer_size = (length > available_data) ? available_data : length;
 
             cq_noc_async_write_with_state<CQ_NOC_SnDL>(data_ptr, dst, xfer_size, num_dests);
-
+            writes++;
+            mcasts += num_dests;
             length -= xfer_size;
             data_ptr += xfer_size;
             dst_addr += xfer_size;
