@@ -2369,6 +2369,7 @@ def make_ttnn_unary_op(ttl_tensor_unop):
 
     return unary_op
 
+
 @setup_host_and_device
 def transpose(
     x,

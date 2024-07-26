@@ -40,7 +40,7 @@ class TT_bmm:
 
         #### OPTION 1: transpose then tilize with padding
         # # Transpose Q in DRAM. This converts to RM
-        # q = tt_lib.tensor.transpose(
+        # q = ttnn.tensor.transpose(
         #     q,
         #     -2,
         #     -3,

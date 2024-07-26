@@ -85,7 +85,7 @@ class TtLlamaRotary(torch.nn.Module):
         # xk = xk.unsqueeze(0).transpose(1, 2)
 
         xq = ttnn.pad(xq, [1, 32, 128, self.head_dim], [0, 0, 0, 0], 0.0)
-        xq = tt_lib.tensor.transpose(xq, 1, 2)
+        xq = ttnn.transpose(xq, 1, 2)
 
         xq = ttnn.matmul(
             xq,
@@ -93,7 +93,7 @@ class TtLlamaRotary(torch.nn.Module):
             # compute_kernel_config=self.model_config["ROT_MAT_COMPUTE_KERNEL_CONFIG"]
         )
 
-        xq = tt_lib.tensor.transpose(xq, 1, 2)
+        xq = ttnn.transpose(xq, 1, 2)
         xq = ttnn.slice(
             xq,
             [0, 0, 0, 0],
