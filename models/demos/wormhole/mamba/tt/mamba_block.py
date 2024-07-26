@@ -50,15 +50,33 @@ class TtMambaBlock(torch.nn.Module):
 
         # conv1d_weights (2E, 1, 4)->(2E, 1)->(2E, 1, 1)->(1, 1, 2E)
         conv1d_weight_name = "mixer.conv1d.weight"
-        self.conv1d_weights = []
+        self.conv1d_weights_prefill = []
         for i in range(4):
-            self.conv1d_weights.append(
+            self.conv1d_weights_prefill.append(
                 load_fn(
                     conv1d_weight_name,
-                    lambda x: x[:, :, i].transpose(-1, -2).repeat(self.batch_size, 1).unsqueeze(0).unsqueeze(0),
-                    postfix=f"{i}_{args.batch_size}",
+                    lambda x: x[:, :, i]
+                    .transpose(-1, -2)
+                    .repeat(self.configs["outer_dim"], 1)
+                    .unsqueeze(0)
+                    .unsqueeze(0),
+                    postfix=f"{i}_{self.configs['outer_dim']}",
                 )
             )
+        self.conv1d_weights_decode = []
+        for i in range(4):
+            self.conv1d_weights_decode.append(
+                load_fn(
+                    conv1d_weight_name,
+                    lambda x: x[:, :, i]
+                    .transpose(-1, -2)
+                    .repeat(self.configs["num_users"], 1)
+                    .unsqueeze(0)
+                    .unsqueeze(0),
+                    postfix=f"{i}_{self.configs['num_users']}",
+                )
+            )
+        self.conv1d_weights = self.conv1d_weights_prefill
 
         conv1d_bias_name = "mixer.conv1d.bias"
         self.conv1d_bias_prefill = load_fn(
@@ -71,7 +89,6 @@ class TtMambaBlock(torch.nn.Module):
             lambda x: x.repeat(self.configs["num_users"], 1),
             postfix=f"{self.configs['num_users']}",
         )
-
         self.conv1d_bias = self.conv1d_bias_prefill
 
         if self.configs["mode"] == ModelMode.DECODE:
@@ -116,11 +133,13 @@ class TtMambaBlock(torch.nn.Module):
 
     def to_prefill(self, prefill_config):
         self.configs = prefill_config
+        self.conv1d_weights = self.conv1d_weights_prefill
         self.conv1d_bias = self.conv1d_bias_prefill
         self.tt_ssm.to_prefill(self.configs)
 
     def to_decode(self, decode_config):
         self.configs = decode_config
+        self.conv1d_weights = self.conv1d_weights_decode
         self.conv1d_bias = self.conv1d_bias_decode
         self.conv_states = []
         for i in range(0, 4):
