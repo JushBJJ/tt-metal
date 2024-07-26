@@ -327,10 +327,6 @@ Tensor where(
     std::optional<Tensor> output_tensor = std::nullopt);
 
 
-// on-device tensor creation 1s like @reference_tensor
-Tensor ones_like(
-    const Tensor& reference_tensor, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // on-device tensor creation 1s with shape
 Tensor ones(
     const Shape shape,

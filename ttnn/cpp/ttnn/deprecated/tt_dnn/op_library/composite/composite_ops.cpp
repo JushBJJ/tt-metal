@@ -378,7 +378,7 @@ Tensor asinh(const Tensor& input_a, const MemoryConfig& output_mem_config) {
 
 // acosh(x) = log(x + sqrt(x^2 - 1))
 Tensor _acosh(const Tensor& input_a, const MemoryConfig& output_mem_config) {
-    Tensor t_one = ones_like(input_a, output_mem_config);
+    Tensor t_one = ttnn::operations::creation::ones_like(input_a);
     Tensor t_result(input_a);
     {
         Tensor ln_res(input_a);
@@ -1073,7 +1073,7 @@ Tensor _scatter(const Tensor& input_a, const Tensor& input_b, const MemoryConfig
     tt::tt_metal::Array4D start_index = {0, 0, 0, 0};
     ttnn::Tensor input_tensor_4D = ttnn::unsqueeze_to_4D(input_a);
 
-    Tensor index = ttnn::pad(0, ones_like(input_tensor_4D, output_mem_config), input_b.get_legacy_shape().to_array_4D(), start_index, 0, false, std::nullopt);
+    Tensor index = ttnn::pad(0, ttnn::operations::creation::ones_like(input_tensor_4D), input_b.get_legacy_shape().to_array_4D(), start_index, 0, false, std::nullopt);
     Tensor temp_a = ttnn::pad(0, input_tensor_4D,input_b.get_legacy_shape().to_array_4D(), start_index, 0, false, std::nullopt);
     return where(index, temp_a, input_b, output_mem_config);
 }
@@ -1315,11 +1315,6 @@ Tensor where(
         queue_id, predicate, value_true, value_false, output_mem_config, output_tensor);
 }
 
-
-// on-device tensor creation 1s like @reference_tensor
-Tensor ones_like(const Tensor& reference_tensor, const MemoryConfig& output_mem_config) {
-    return mk_filled_tensor_like(reference_tensor, 1.0f, output_mem_config);
-}
 
 // hardtanh
 Tensor _hardtanh(

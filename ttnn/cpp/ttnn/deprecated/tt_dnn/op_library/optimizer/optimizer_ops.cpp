@@ -50,7 +50,7 @@ std::vector<Tensor> _lamb_optimizer(const Tensor& data, const Tensor& grad, cons
     Tensor weight_norm = clamp(data_val, 0.0f, 10.0f, output_mem_config);
 
     Tensor adam_norm = rmsnorm(adam_step);
-    Tensor ones = ones_like(weight_norm, output_mem_config);
+    Tensor ones = ttnn::operations::creation::ones_like(weight_norm);
 
     Tensor trust_ratio_mid = ttnn::multiply(weight_norm, ttnn::reciprocal(ttnn::add(adam_norm, eps, std::nullopt, output_mem_config),output_mem_config), std::nullopt, output_mem_config);
     Tensor trust_ratio = where(ttnn::gtz(weight_norm, output_mem_config), where(ttnn::gtz(adam_norm, output_mem_config), trust_ratio_mid, ones, output_mem_config), ones);
