@@ -341,18 +341,6 @@ Tensor zeros_like(
 Tensor ones_like(
     const Tensor& reference_tensor, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// on-device tensor creation with value like @reference_tensor
-Tensor full_like(
-    uint8_t queue_id,
-    const Tensor& reference_tensor,
-    float value,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor= std::nullopt);
-Tensor full_like(
-    const Tensor& reference_tensor,
-    float value,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor= std::nullopt);
 
 // on-device tensor creation 0s with shape
 Tensor zeros(

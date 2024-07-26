@@ -574,37 +574,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         )doc");
 
     m_tensor.def(
-        "full_like",
-        [](const Tensor& reference_tensor,
-           float value,
-           const MemoryConfig& output_mem_config,
-           std::optional<Tensor> output_tensor,
-           uint8_t queue_id) {
-            return full_like(queue_id, reference_tensor, value, output_mem_config, output_tensor);
-        },
-        py::arg("input").noconvert(),
-        py::arg("fill_value"),
-        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-        py::arg("output_tensor").noconvert() = std::nullopt,
-        py::arg("queue_id").noconvert() = 0,
-        R"doc(
-            Returns a new tensor filled with the scalar value shaped like reference tensor ``arg0``.
-
-            Input tensor must have BFLOAT16 data type.
-
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "input", "Reference Tensor", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
-                "fill_value", "Fill value", "float", "", "Yes"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-                "output_tensor", "optional output tensor", "Tensor", "default is None", "No"
-                "queue_id", "Command queue id", "integer", "default to 0", "No"
-        )doc");
-
-    m_tensor.def(
         "zeros_like",
         [](const Tensor& reference_tensor,
            const MemoryConfig& output_mem_config,

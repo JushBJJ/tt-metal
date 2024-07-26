@@ -1383,7 +1383,7 @@ def full_like(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.full_like(t0, scalar, output_mem_config=output_mem_config)
+    t1 = ttnn.full_like(t0, scalar, output_mem_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 

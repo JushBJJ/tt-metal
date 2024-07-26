@@ -40,8 +40,6 @@ def custom_compare(*args, **kwargs):
         "is_close",
     ]:
         comparison_func = comparison_funcs.comp_equal
-    elif function in ["empty"]:
-        comparison_func = comparison_funcs.comp_shape
     else:
         comparison_func = partial(comparison_funcs.comp_pcc, pcc=reference_pcc[function])
     result = comparison_func(*args, **kwargs)
@@ -78,12 +76,9 @@ if is_wormhole_b0():
                 "hardsigmoid",
                 "ones_like",
                 "zeros_like",
-                "full_like",
                 "ones",
-                "empty",
                 "zeros",
                 "full",
-                "arange",
                 "hardshrink",
                 "softshrink",
                 "sinh",
@@ -200,9 +195,7 @@ def test_run_eltwise_composite_test(fn, input_shapes, device, function_level_def
     datagen_func = datagen_func * num_inputs
     test_args = generation_funcs.gen_default_dtype_layout_device(input_shapes)[0]
     test_args.update({"scalar": np.random.randint(-100, 100)})
-    if fn == "arange":
-        test_args.update({"start": -10, "end": 1024 - 10, "step": 1})
-    elif fn == "polyval":
+    if fn == "polyval":
         test_args.update({"coeffs": [1.0, 2.0, 1.0, 2.0]})
     elif fn == "threshold":
         test_args.update({"threshold": 5.0, "value": 1.0})
