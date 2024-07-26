@@ -1339,12 +1339,6 @@ Tensor clamp(const Tensor& a, float low, float high, const MemoryConfig& output_
     return operation::decorate_as_composite(__func__, _clamp)(a, low, high, output_mem_config);
 }
 
-// on-device tensor creation 0s with shape
-Tensor zeros(
-    const Shape shape, DataType data_type, Layout layout, Device* device, const MemoryConfig& output_mem_config) {
-    return tt::numpy::zeros(shape, data_type, layout, device, output_mem_config);
-}
-
 // on-device tensor creation 1s with shape
 Tensor ones(
     const Shape shape, DataType data_type, Layout layout, Device* device, const MemoryConfig& output_mem_config) {

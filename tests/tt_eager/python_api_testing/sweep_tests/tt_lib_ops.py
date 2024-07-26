@@ -1402,7 +1402,7 @@ def ones(x, *args, device, dtype, layout, input_mem_config, output_mem_config, *
 
 @setup_host_and_device
 def zeros(x, *args, device, dtype, layout, input_mem_config, output_mem_config, **kwargs):
-    t1 = ttl.tensor.zeros(
+    t1 = ttnn.zeros(
         x.shape,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,

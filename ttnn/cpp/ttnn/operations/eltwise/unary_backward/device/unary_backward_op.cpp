@@ -1431,24 +1431,26 @@ std::vector<Tensor> _repeat_bw(
     } else if (shape[0] > 1) {
         std::vector<int64_t> dim = {0};
         TT_FATAL(shape[1] == 1 && shape[2] == 1 && shape[3] == 1 && "repeat[1], [2], [3] should be 1");
-        const tt::tt_metal::Shape required = {1, shape_wh[1], shape_wh[2], shape_wh[3]};
+        std::array<std::uint32_t, 4> intended_shape_array = {1, shape_wh[1], shape_wh[2], shape_wh[3]};
+        const ttnn::Shape required = ttnn::Shape(intended_shape_array);
         Tensor result = tt::operations::primary::moreh_sum(
             grad,
             dim,
             true,
-            tt::tt_metal::zeros(required, input.get_dtype(), input.get_layout(), input.device(), output_memory_config),
+            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout()),
             output_memory_config);
         grad_tensor.emplace_back(result);
         return grad_tensor;
     } else if (shape[1] > 1) {
         std::vector<int64_t> dim = {1};
         TT_FATAL(shape[0] == 1 && shape[2] == 1 && shape[3] == 1 && "repeat[0], [2], [3] should be 1");
-        const tt::tt_metal::Shape required = {shape_wh[0], 1, shape_wh[2], shape_wh[3]};
+        std::array<std::uint32_t, 4> intended_shape_array = {shape_wh[0], 1, shape_wh[2], shape_wh[3]};
+        const ttnn::Shape required = ttnn::Shape(intended_shape_array);
         Tensor result = tt::operations::primary::moreh_sum(
             grad,
             dim,
             true,
-            tt::tt_metal::zeros(required, input.get_dtype(), input.get_layout(), input.device(), output_memory_config),
+            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout()),
             output_memory_config);
         grad_tensor.emplace_back(result);
         return grad_tensor;

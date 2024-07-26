@@ -331,15 +331,6 @@ Tensor where(
 Tensor ones_like(
     const Tensor& reference_tensor, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-
-// on-device tensor creation 0s with shape
-Tensor zeros(
-    const Shape shape,
-    DataType data_type = DataType::BFLOAT16,
-    Layout layout = Layout::ROW_MAJOR,
-    Device* device = nullptr,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // on-device tensor creation 1s with shape
 Tensor ones(
     const Shape shape,

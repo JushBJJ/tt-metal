@@ -76,7 +76,6 @@ if is_wormhole_b0():
                 "hardsigmoid",
                 "ones_like",
                 "ones",
-                "zeros",
                 "hardshrink",
                 "softshrink",
                 "sinh",
