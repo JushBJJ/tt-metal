@@ -373,8 +373,6 @@ but in general retaining the data.
 Tensor creation operations
 ==========================
 
-.. autofunction:: tt_lib.tensor.ones
-
 .. autofunction:: tt_lib.tensor.split_last_dim_two_chunks_tiled
 
 .. autofunction:: tt_lib.tensor.tril

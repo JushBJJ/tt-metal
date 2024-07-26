@@ -327,14 +327,6 @@ Tensor where(
     std::optional<Tensor> output_tensor = std::nullopt);
 
 
-// on-device tensor creation 1s with shape
-Tensor ones(
-    const Shape shape,
-    DataType data_type = DataType::BFLOAT16,
-    Layout layout = Layout::ROW_MAJOR,
-    Device* device = nullptr,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // rpow: y = k**(a)
 Tensor rpow(const Tensor& a, float k, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 

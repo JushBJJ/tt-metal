@@ -74,7 +74,6 @@ if is_wormhole_b0():
                 "hypot",
                 "hardswish",
                 "hardsigmoid",
-                "ones",
                 "hardshrink",
                 "softshrink",
                 "sinh",
