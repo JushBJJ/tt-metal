@@ -9,7 +9,7 @@
 #include "compute_kernel_api/pack_untilize.h"
 #include "compute_kernel_api/tile_move_copy.h"
 #include "compute_kernel_api/matmul.h"
-// #include "debug/dprint.h"
+#include "debug/dprint.h"
 
 #ifdef FUSE_BIAS
 #include "compute_kernel_api/bcast.h"
@@ -128,15 +128,29 @@ void MAIN {
     #endif
 
     constexpr uint32_t mm_in0_cb_id = tilize_in0 ? tilized_in0_cb_id : in0_cb_id;
+    #ifdef PACKER_L1_ACC
+    DPRINT_MATH(DPRINT<<"Packer L1 Acc"<<"\n";)
+    #else
+    DPRINT_MATH(DPRINT<<"No Packer L1 Acc"<<"\n";)
+    #endif
+    #ifdef PRE_TILIZE
+    DPRINT_MATH(DPRINT<<"PRE_TILIZE"<<"\n";)
+    #else
+    DPRINT_MATH(DPRINT<<"No PRE_TILIZE"<<"\n";)
+    #endif
 
     #ifdef SPLIT_READER
     constexpr uint32_t in0_num_subblocks_read_last = in0_num_subblocks / 2;
     constexpr uint32_t in0_num_subblocks_read = in0_num_subblocks - in0_num_subblocks_read_last;
     #else
     constexpr uint32_t in0_num_subblocks_read = in0_num_subblocks;
+    DPRINT_MATH(DPRINT<<"No Split Reader"<<"\n";)
     #endif
 
 
+    DPRINT_MATH(DPRINT<<"Compute Core L1: "<<in0_block_w<<"  "<<in0_num_subblocks<<"  "<<in0_block_num_tiles<<"  "<<in0_subblock_num_tiles<<"  "<<in0_subblock_h<<"  "<<in1_num_subblocks<<"  "<<in1_block_num_tiles<<"  "<<in1_block_w<<"\n";)
+    DPRINT_MATH(DPRINT<<"Compute Core L2: "<<in0_num_blocks_h<<"  "<<in0_num_blocks_w<<"  "<<in1_num_blocks_w<<"  "<<out_subblock_h<<"  "<<out_subblock_w<<"  "<<out_subblock_num_tiles<<" ||"<<(uint32_t)tilize_in0<<"\n";)
+    // return;
     mm_block_init(mm_in0_cb_id, in1_cb_id, out_cb_id, false, out_subblock_w, out_subblock_h, in0_block_w);
     #ifdef SFPU_OP_INIT_ACTIVATION
     SFPU_OP_INIT_ACTIVATION

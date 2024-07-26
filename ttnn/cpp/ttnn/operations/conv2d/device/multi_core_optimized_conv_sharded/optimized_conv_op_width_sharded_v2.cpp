@@ -359,7 +359,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     const auto& p_config = parallelization_config;
     uint32_t num_cores_x = p_config.grid_size.x;
     uint32_t num_cores_y = p_config.grid_size.y;
-    uint32_t total_num_cores = num_cores_x * num_cores_y;
+    uint32_t total_num_cores = p_config.num_cores_c;
     assert(num_cores_x < 13);
     assert(num_cores_y < 10);
     uint32_t per_core_out_matrix_height_ntiles = p_config.per_core_out_matrix_height_ntiles;
@@ -380,6 +380,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     } else {
         input_channels_padded = shard_shape[1];
     }
+    TT_FATAL(conv_act_c_blocks == p_config.num_cores_c);
     TT_FATAL(input_channels_padded >= ashape[3], "Incorrect padding of input channels!");
     // check is for 16-byte alignment
     TT_FATAL(
@@ -460,6 +461,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     assert(act_matrix_width_ntiles % act_block_w_ntiles == 0);
     assert(weight_matrix_width_ntiles % weight_block_w_ntiles == 0);
     assert(act_matrix_height_ntiles % out_block_h_ntiles == 0);
+    TT_ASSERT((act_block_w_ntiles*32)==(weight_size_h*weight_size_w*input_channels_padded)/total_num_cores,act_block_w_ntiles,input_channels_padded);
 
     uint32_t num_blocks_act_h = act_matrix_height_ntiles / act_block_h_ntiles;
     uint32_t num_blocks_out_h = act_matrix_height_ntiles / out_block_h_ntiles;
@@ -505,6 +507,9 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     uint32_t weight_num_subblocks = weight_block_w_ntiles / out_subblock_w_ntiles;
     uint32_t weight_block_h_ntiles = act_block_w_ntiles;
     uint32_t weight_block_num_tiles = weight_block_w_ntiles * weight_block_h_ntiles;
+    uint32_t weight_block_in_channels_ntiles = input_channels_padded/(32*total_num_cores);
+    TT_ASSERT(input_channels_padded>=(TILE_HEIGHT*total_num_cores));
+    TT_ASSERT(input_channels_padded%(TILE_HEIGHT*total_num_cores)==0);
 
     uint32_t num_groups = num_blocks_act_h * num_blocks_act_w * num_blocks_weight_w;
     // writer of conv op partially removes padding on the width
@@ -599,6 +604,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
 
     // log info for debugging opts
     {
+        log_debug(LogOp, "input_channels_padded: {}", input_channels_padded);
         log_debug(LogOp, "grid_size: {}", p_config.grid_size);
         log_debug(LogOp, "packer_l1: {}", packer_l1_acc);
         log_debug(LogOp, "split_reader: {}", split_reader);
@@ -674,10 +680,12 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
 
     std::vector<uint32_t> reader_rt_args;
     std::vector<uint32_t> activation_kernel_compile_args;
+    std::vector<uint32_t> weights_kernel_compile_args;
     std::vector<uint32_t> writer_rt_args;
     std::vector<uint32_t> writer_compile_time_args;
     std::vector<uint32_t> compute_kernel_args;
-    bool tilize_in0 = true;
+    bool tilize_in0 = false;
+
     uint32_t act_mcast_sender_semaphore = tt_metal::CreateSemaphore(program, all_cores, 0);   //0==INVALID
     uint32_t act_mcast_receiver_semaphore = tt_metal::CreateSemaphore(program, all_cores, 0); //0==INVALID.
 
@@ -709,6 +717,18 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         (uint32_t)total_num_cores
     };
 
+    weights_kernel_compile_args = {
+        weight_cb,                                                 //cb_id_weight
+        act_block_w_ntiles/(weight_size_h*weight_size_w),          //core_in_channels_ntiles
+        weight_size_h*weight_size_w,                               //window_size_hw
+        weight_block_w_ntiles,                                     //weight_block_width_ntiles
+        weight_block_num_tiles,                                    //weight_block_num_tiles
+        weight_matrix_width_ntiles,                                //weight_matrix_width_ntiles
+        (weight_matrix_width_ntiles * input_channels_padded)/32,   //weight_next_channel_stride_h
+        weight_matrix_width_ntiles*weight_block_in_channels_ntiles, //weight_next_block_stride_h
+        total_num_cores                                            //weights_height_num_blocks
+    };
+
     uint32_t num_weight_slices_width = weight_matrix_width_ntiles / per_core_out_matrix_width_ntiles;
     uint32_t in0_block_w = act_block_w_ntiles / conv_act_c_blocks;
     uint32_t num_blocks_act_h_per_core = (per_core_out_matrix_height_ntiles + act_block_h_ntiles - 1) / act_block_h_ntiles;
@@ -718,6 +738,8 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     std::map<string, string> writer_defines;
     std::map<string, string> writer_mcast_sender_defines;
     std::map<string, string> compute_defines;
+
+    compute_defines["TEST"] = "1";
 
     if (output.memory_config().is_sharded()) {
         writer_defines["SHARDED_OUT"] = "1";
@@ -748,29 +770,32 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     if (false) {
         compute_defines["PACKER_L1_ACC"] = "1";
     }
+    std::cout<<"Compute defines \n";
+    for(const auto &it : compute_defines )
+        std::cout<<it.first<<" : "<<it.second<<std::endl;
 
     compute_kernel_args = {
         act_block_w_ntiles, //in0_block_w
-        act_num_subblocks,
+        act_num_subblocks, //in0_num_sublocks
         act_block_num_tiles, //in0_block_num_tiles,
         act_subblock_num_tiles, //in0_sublock_num_tiles
-        act_subblock_h_ntiles,
+        act_subblock_h_ntiles, //in0_subblock_h
 
 
-        weight_num_subblocks,
+        weight_num_subblocks,  //in1_num_sublocks
         weight_block_num_tiles,//in1_block_num_tiles,
-        weight_block_w_ntiles,
+        weight_block_w_ntiles, //in1_block_w
 
-        num_blocks_act_h_per_core,
-        num_blocks_act_w, //in0_num_blocks_w,
-        num_blocks_weight_w_per_core,
+        num_blocks_act_h_per_core,    //in0_num_blocks_h
+        num_blocks_act_w,             //in0_num_blocks_w,
+        num_blocks_weight_w_per_core, //in1_num_blocks_w
 
-        out_subblock_h_ntiles_padded,
-        out_subblock_w_ntiles,
-        out_subblock_num_tiles,
+        out_subblock_h_ntiles_padded, //out_sublock_h
+        out_subblock_w_ntiles,        //out_sublock_w
+        out_subblock_num_tiles,       //out_sublock_num_tiles
 
-        tilize_in0,
-        untilize_out,
+        tilize_in0,                   //tilize_in0
+        untilize_out,                 //untilize_out
 
         bias_ntiles_per_core
     };
@@ -780,6 +805,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
 
     uint32_t act_tile_size = tt_metal::detail::TileSize(act_df);
     uint32_t tilized_act_tile_size = tt_metal::detail::TileSize(tilized_act_df);
+    uint32_t weight_tile_size = tt_metal::detail::TileSize(weight_df);
 
     uint32_t num_act_cb_tiles = act_block_h_ntiles * act_block_w_ntiles / conv_act_c_blocks;
 
@@ -797,8 +823,13 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
             act_block_num_tiles * tilized_act_tile_size, {{tilize_mode_tilized_act_cb, tilized_act_df}})
             .set_page_size(tilize_mode_tilized_act_cb, tilized_act_tile_size);
     auto cb_src0_tilized = tt_metal::CreateCircularBuffer(program, all_cores, cb_src0_tilized_config);
-    // log_debug(LogOp, "Tilized Act CB: {}, npages: {}, pagesize: {}", tilize_mode_tilized_act_cb, num_cb0_tilized_tiles, tilized_act_tile_size);
+    log_debug(LogOp, "Tilized Act CB: {}, npages: {}, pagesize: {}", tilize_mode_tilized_act_cb, act_block_num_tiles, tilized_act_tile_size);
 
+    CircularBufferConfig cb_weight_config =
+        CircularBufferConfig(weight_block_num_tiles * weight_tile_size, {{weight_cb, weight_df}})
+            .set_page_size(weight_cb, weight_tile_size);
+    auto cb_weight = tt_metal::CreateCircularBuffer(program, all_cores, cb_weight_config);
+    log_debug(LogOp, "Weight CB: {}, npages: {}, pagesize: {}, ", weight_cb, weight_block_num_tiles, weight_tile_size);
 
     CircularBufferConfig cb_act_row_major_bfloat16_config =
                 CircularBufferConfig(num_act_cb_tiles * act_tile_size, {{act_cb_row_major_bfloat16, act_df}})
@@ -814,7 +845,7 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
     }
     auto cb_output = tt_metal::CreateCircularBuffer(program, all_cores, cb_output_config);
 
-    log_debug(LogOp, "Act Block CB Address: {}",GetCircularBufferConfig(program,cb_act_row_major_bfloat16).globally_allocated_address());
+    // log_debug(LogOp, "Act Block CB Address: {}");
 
     CircularBufferConfig cb_for_reader_indices_config =
         CircularBufferConfig(out_block_h_datums * 2, {{cb_for_reader_indices, tt::DataFormat::Float16_b}})
@@ -835,15 +866,25 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         }
     );
 
-    // auto compute_id = CreateKernel(
-    //     program,
-    //     compute_kernel_path,
-    //     all_cores,
-    //     ComputeConfig{
-    //         .math_fidelity = math_fidelity,
-    //         .fp32_dest_acc_en = fp32_dest_acc_en,
-    //         .compile_args = compute_kernel_args,
-    //         .defines = compute_defines});
+    auto weights_kernel_id = CreateKernel(
+        program,
+        weights_kernel_path,
+        all_cores,
+        DataMovementConfig{
+            .processor = DataMovementProcessor::RISCV_1,
+            .noc = NOC::RISCV_1_default,
+            .compile_args = weights_kernel_compile_args
+        }
+    );
+    auto compute_id = CreateKernel(
+        program,
+        compute_kernel_path,
+        all_cores,
+        ComputeConfig{
+            .math_fidelity = math_fidelity,
+            .fp32_dest_acc_en = fp32_dest_acc_en,
+            .compile_args = compute_kernel_args,
+            .defines = compute_defines});
 
     log_debug(LogOp, "Act MCast Start {},{}",act_mcast_start.x,act_mcast_start.y);
     log_debug(LogOp, "Act MCast End {},{}",act_mcast_end.x,act_mcast_end.y);
@@ -855,6 +896,11 @@ operation::ProgramWithCallbacks multi_core_optimized_conv_width_sharded_v2_impl(
         SetRuntimeArgs(program,act_kernel_id,CoreCoord(core_x,core_y),{
             core_x,
             core_y
+        });
+        std::cout<<"Core "<<core_index<<"Start Tile "<<core_index*weight_block_w_ntiles<<std::endl;
+        SetRuntimeArgs(program,weights_kernel_id,CoreCoord(core_x,core_y),{
+            core_index*weight_block_w_ntiles,
+            b.buffer()->address()
         });
     }
 
