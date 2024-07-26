@@ -58,7 +58,7 @@ std::vector<Tensor> _complex_recip_bw(const Tensor& grad, const Tensor& input, c
     condition_nan.deallocate();
     Tensor grad_result = where(
         nan_flag,
-        full_like(input, std::nanf(""), output_mem_config),
+        ttnn::full_like(input, std::nanf("")),
         complex_mul(
             ttnn::neg(grad, output_mem_config),
             conj(
@@ -194,7 +194,7 @@ std::vector<Tensor> _polar_bw(
         real(complex_mul(conj(grad, output_mem_config), sgn_result, output_mem_config), output_mem_config);
     sgn_result.deallocate();
     Tensor flip_tensor = mk_complex(
-        zeros_like(input_a, output_mem_config), full_like(input_b, 1.0, output_mem_config), output_mem_config);
+        zeros_like(input_a, output_mem_config), ttnn::full_like(input_b, 1.0), output_mem_config);
     Tensor grad_angle = real(
         complex_mul(
             conj(grad, output_mem_config), complex_mul(result, flip_tensor, output_mem_config), output_mem_config),
@@ -231,14 +231,14 @@ std::vector<Tensor> _complex_div_bw(
     condition_nan.deallocate();
     Tensor grad_a = where(
         nan_flag,
-        full_like(input, std::nanf(""), output_mem_config),
+        ttnn::full_like(input, std::nanf("")),
         complex_div(grad, conj(other, output_mem_config), output_mem_config),
         output_mem_config);
     grad_tensor.emplace_back(grad_a);
     Tensor result = complex_div(input, other, output_mem_config);
     Tensor grad_b = where(
         nan_flag,
-        full_like(input, std::nanf(""), output_mem_config),
+        ttnn::full_like(input, std::nanf("")),
         complex_mul(
             ttnn::neg(grad, output_mem_config),
             conj(complex_div(result, other, output_mem_config), output_mem_config),

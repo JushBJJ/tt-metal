@@ -312,7 +312,7 @@ Tensor max(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& out
 
 Tensor _logical_andi(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
     if (std::fpclassify(immediate) == FP_ZERO) {
-        return ttnn::full_like(input_a, immediate, output_mem_config);
+        return ttnn::full_like(input_a, immediate);
     } else {
         return ttnn::nez(input_a);
     }
@@ -511,7 +511,7 @@ Tensor _logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& 
     if (std::fpclassify(immediate) == FP_ZERO) {
         return ttnn::nez(input_a, output_mem_config);
     } else {
-        return ttnn::full_like(input_a, 1, output_mem_config);
+        return ttnn::full_like(input_a, 1);
     }
 }
 Tensor logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
@@ -519,7 +519,7 @@ Tensor logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& o
 }
 
 Tensor _logical_noti(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
-    Tensor t_imm = ttnn::full_like(input_a, immediate, output_mem_config);
+    Tensor t_imm = ttnn::full_like(input_a, immediate);
     Tensor result = ttnn::logical_not(t_imm, output_mem_config);
     return result;
 }
@@ -615,8 +615,8 @@ Tensor _addcdiv(
     t_div.deallocate();
     t_value.deallocate();
     Tensor result = ttnn::add(input_a, t_factor, std::nullopt, output_mem_config);
-    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity(), output_mem_config);
-    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""), output_mem_config);
+    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity());
+    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""));
     return where(
         ttnn::eqz(input_c, output_mem_config),
         (value == 0) ? t_nan
@@ -651,8 +651,8 @@ Tensor _div(const Tensor& input_a, const Tensor& input_b, bool accurate_mode, st
         return result;
     }
 
-    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity(), output_mem_config);
-    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""), output_mem_config);
+    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity());
+    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""));
     return where(
         ttnn::eqz(input_b, output_mem_config),
         where(
@@ -767,7 +767,7 @@ Tensor _round(const Tensor& input, int64_t decimals, const MemoryConfig& output_
     Tensor floor_res = ttnn::floor(input, output_mem_config);
     if (decimals != 0) {  // TODO: For decimal value!=0
         Tensor power_10 =
-            pow(ttnn::full_like(input, 10.0f, output_mem_config), static_cast<float>(decimals), output_mem_config);
+            pow(ttnn::full_like(input, 10.0f), static_cast<float>(decimals), output_mem_config);
         Tensor rounded_non_half = ttnn::floor(
             ttnn::add(ttnn::multiply(input, power_10, std::nullopt, output_mem_config), 0.5, std::nullopt, output_mem_config),
             output_mem_config);
@@ -813,8 +813,8 @@ Tensor floor_div(const Tensor& input_a, const Tensor& input_b, const MemoryConfi
 
 Tensor _floor_div_overload(const Tensor& input, float value, const MemoryConfig& output_mem_config) {
     if (value == 0) {
-        Tensor t_inf = ttnn::full_like(input, std::numeric_limits<float>::infinity(), output_mem_config);
-        Tensor t_nan = ttnn::full_like(input, std::nanf(""), output_mem_config);
+        Tensor t_inf = ttnn::full_like(input, std::numeric_limits<float>::infinity());
+        Tensor t_nan = ttnn::full_like(input, std::nanf(""));
         return where(
             ttnn::eqz(input, output_mem_config),
             t_nan,
@@ -951,7 +951,7 @@ Tensor logical_xori(const Tensor& input_a, float value, const MemoryConfig& outp
 
 // xlogy(x,y))=x*log(y)
 Tensor _xlogy(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
-    Tensor t_nan = ttnn::full_like(input_b, std::nanf(" "), output_mem_config);
+    Tensor t_nan = ttnn::full_like(input_b, std::nanf(" "));
     Tensor result = ttnn::multiply(input_a, ttnn::log(input_b, output_mem_config), std::nullopt, output_mem_config);
     result = where(
         ttnn::logical_or(
