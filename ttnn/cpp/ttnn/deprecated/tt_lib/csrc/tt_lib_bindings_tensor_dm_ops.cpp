@@ -209,7 +209,7 @@ namespace tt::tt_metal::detail{
         )doc");
 
         m_tensor.def("fold", &fold,
-            py::arg("input").noconvert(), py::arg("stride_h"), py::arg("stride_w"), R"doc(
+            py::arg("input").noconvert(), py::arg("stride_h"), py::arg("stride_w"), py::arg("use_transpose_as_fold"), py::arg("output_shape"), py::arg("pad_c"), py::arg("pad_h"), py::arg("pad_w"), R"doc(
             Fold TT Tensor.
 
             Input tensor must be on TT accelerator device, in ROW_MAJOR.
