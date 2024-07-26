@@ -556,6 +556,11 @@ void EnqueueProgramCommand::assemble_runtime_args_commands() {
                     max_prefetch_command_size,
                     packed_write_max_unicast_sub_cmds,
                     false);
+                for (auto &data_per_kernel : unique_rt_data_and_sizes) {
+                    for (auto &data_and_sizes : data_per_kernel) {
+                        RecordDispatchData(program, DISPATCH_DATA_RTARGS, std::get<1>(data_and_sizes));
+                    }
+                }
                 unique_sub_cmds.clear();
                 unique_rt_data_and_sizes.clear();
                 unique_rt_args_data.clear();
@@ -639,6 +644,11 @@ void EnqueueProgramCommand::assemble_runtime_args_commands() {
                     common_sub_cmds);
             }
 
+            for (auto& data_per_kernel : common_rt_data_and_sizes) {
+                for (auto& data_and_sizes : data_per_kernel) {
+                    RecordDispatchData(program, DISPATCH_DATA_RTARGS, std::get<1>(data_and_sizes));
+                }
+            }
             common_rt_data_and_sizes.clear();
             common_rt_args_data.clear();
         }
@@ -648,6 +658,9 @@ void EnqueueProgramCommand::assemble_runtime_args_commands() {
     for (const auto& cmds : this->cached_program_command_sequences[program.id].runtime_args_command_sequences) {
         // BRISC, NCRISC, TRISC...
         runtime_args_fetch_size_bytes += cmds.size_bytes();
+    }
+    for (CoreType core_type : core_types) {
+        RecordKernelGroups(program, core_type, program.get_kernel_groups(core_type));
     }
     this->cached_program_command_sequences[program.id].runtime_args_fetch_size_bytes = runtime_args_fetch_size_bytes;
 }
@@ -833,6 +846,7 @@ void EnqueueProgramCommand::assemble_device_commands() {
                             noc_encoding,         // noc_xy_addr
                             kg_transfer_info.dst_base_addrs[kernel_idx],
                             kg_transfer_info.lengths[kernel_idx]);
+                        RecordDispatchData(program, DISPATCH_DATA_BINARY, kg_transfer_info.lengths[kernel_idx]);
                         // Difference between prefetch total relayed pages and dispatch write linear
                         uint32_t relayed_bytes =
                             align(kg_transfer_info.lengths[kernel_idx], HostMemDeviceCommand::PROGRAM_PAGE_SIZE);
@@ -888,6 +902,7 @@ void EnqueueProgramCommand::assemble_device_commands() {
                                 .addr = dst_addr,
                                 .length = (uint16_t)write_length,
                                 .num_mcast_dests = (uint16_t)dst_noc_info.second});
+                            RecordDispatchData(program, DISPATCH_DATA_BINARY, write_length);
                             dst_addr += write_length;
 
                             kernel_bins_prefetch_subcmds.back().emplace_back(CQPrefetchRelayPagedPackedSubCmd{
@@ -1000,6 +1015,9 @@ void EnqueueProgramCommand::assemble_device_commands() {
                     this->packed_write_max_unicast_sub_cmds,
                     curr_sub_cmd_idx);
                 curr_sub_cmd_idx += num_sub_cmds_in_cmd;
+                for (auto &data_and_size : multicast_sem_data[i]) {
+                    RecordDispatchData(program, DISPATCH_DATA_SEMAPHORE, data_and_size.second);
+                }
             }
         }
 
@@ -1017,6 +1035,9 @@ void EnqueueProgramCommand::assemble_device_commands() {
                     this->packed_write_max_unicast_sub_cmds,
                     curr_sub_cmd_idx);
                 curr_sub_cmd_idx += num_sub_cmds_in_cmd;
+                for (auto &data_and_size : unicast_sem_data[i]) {
+                    RecordDispatchData(program, DISPATCH_DATA_SEMAPHORE, data_and_size.second);
+                }
             }
         }
 
@@ -1036,7 +1057,11 @@ void EnqueueProgramCommand::assemble_device_commands() {
                     multicast_cb_config_data,
                     this->packed_write_max_unicast_sub_cmds,
                     curr_sub_cmd_idx);
+                for (auto &data_and_size : multicast_cb_config_data) {
+                    RecordDispatchData(program, DISPATCH_DATA_CB_CONFIG, data_and_size.second);
+                }
                 curr_sub_cmd_idx += num_sub_cmds_in_cmd;
+                RecordDispatchData(program, DISPATCH_DATA_CB_CONFIG, mcast_cb_payload_sizeB);
                 uint32_t curr_sub_cmd_data_offset_words =
                     (write_offset_bytes + (sizeof(CQPrefetchCmd) + sizeof(CQDispatchCmd)) +
                      align(num_sub_cmds_in_cmd * sizeof(CQDispatchWritePackedMulticastSubCmd), L1_ALIGNMENT)) /

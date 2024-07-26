@@ -120,7 +120,7 @@ KernelGroup::KernelGroup() : core_ranges({}) {}
 KernelGroup::KernelGroup(
     const Program &program,
     CoreType core_type,
-    std::array<std::optional<KernelHandle>, DISPATCH_CLASS_MAX> kernel_ids,
+    kernel_id_array_t kernel_ids,
     bool erisc_is_idle,
     int last_cb_index,
     const CoreRangeSet &new_ranges) :
@@ -187,7 +187,7 @@ KernelGroup *Program::kernels_on_core(const CoreCoord &core, const CoreType &cor
 
 struct KernelGroupInt {
     bool valid;
-    std::array<std::optional<KernelHandle>, DISPATCH_CLASS_MAX> kernel_ids;
+    kernel_id_array_t kernel_ids;
 
     bool operator==(const KernelGroupInt &b) const;
     void update(dispatch_core_processor_classes proc_class, size_t kernel_idx) {

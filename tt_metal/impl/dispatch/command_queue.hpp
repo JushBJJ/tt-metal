@@ -18,6 +18,7 @@
 #include "tt_metal/impl/dispatch/command_queue_interface.hpp"
 #include "tt_metal/impl/dispatch/device_command.hpp"
 #include "tt_metal/impl/dispatch/lock_free_queue.hpp"
+#include "tt_metal/impl/dispatch/data_collection.hpp"
 #include "tt_metal/impl/program/program.hpp"
 #include "tt_metal/impl/trace/trace_buffer.hpp"
 
