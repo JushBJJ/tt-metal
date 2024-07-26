@@ -34,6 +34,7 @@
 #include "ttnn/operations/transformer/transformer_pybind.hpp"
 #include "ttnn/operations/eltwise/complex_unary_backward/complex_unary_backward_pybind.hpp"
 #include "ttnn/operations/eltwise/complex_binary_backward/complex_binary_backward_pybind.hpp"
+#include "ttnn/operations/pool/downsample/downsample_op_pybind.hpp"
 #include "ttnn/operations/experimental/experimental_pybind.hpp"
 
 namespace py = pybind11;
@@ -96,6 +97,7 @@ void py_module(py::module& module) {
     auto m_pool = module.def_submodule("pool", "pooling  operations");
     maxpool::py_module(m_pool);
     avgpool::py_module(m_pool);
+    downsample::py_module(m_pool);
 
     auto m_normalization = module.def_submodule("normalization", "normalization operations");
     normalization::py_module(m_normalization);

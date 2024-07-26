@@ -19,7 +19,7 @@ namespace ttnn {
 
 namespace operations {
 
-namespace data_movement {
+namespace downsample {
 
 void Downsample::validate(const std::vector<Tensor>& input_tensors) const {
     const auto& input_tensor_a = input_tensors.at(0);
@@ -628,7 +628,7 @@ operation::ProgramWithCallbacks downsample_single_core(
     // Writer to downsample - drops rows from untilized cb
     tt::tt_metal::KernelHandle downsample_writer_kernel_id = tt::tt_metal::CreateKernel(
         program,
-        "ttnn/cpp/ttnn/operations/data_movement/downsample/device/kernels/downsample_writer_kernel.cpp",
+        "ttnn/cpp/ttnn/operations/pool/downsample/device/kernels/downsample_writer_kernel.cpp",
         core_range,
         tt::tt_metal::WriterDataMovementConfig(writer_compile_time_args));
 
@@ -643,10 +643,10 @@ operation::ProgramWithCallbacks downsample_single_core(
         num_rows_of_output_tiles,
         num_output_tiles_in_row,
     };
-    string compute_kernel = "ttnn/cpp/ttnn/operations/data_movement/downsample/device/kernels/downsample_compute_kernel.cpp";
+    string compute_kernel = "ttnn/cpp/ttnn/operations/pool/downsample/device/kernels/downsample_compute_kernel.cpp";
     if (num_input_tiles_in_row <= MAX_PACK_UNTILIZE_WIDTH) {
         compute_kernel =
-            "ttnn/cpp/ttnn/operations/data_movement/downsample/device/kernels/downsample_fast_pack_untilize_compute_kernel.cpp";
+            "ttnn/cpp/ttnn/operations/pool/downsample/device/kernels/downsample_fast_pack_untilize_compute_kernel.cpp";
     }
     auto downsample_compute_kernel_id = tt::tt_metal::CreateKernel(
         program, compute_kernel, core_range, tt::tt_metal::ComputeConfig{.compile_args = compute_args});
