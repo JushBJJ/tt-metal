@@ -1422,6 +1422,7 @@ std::vector<Tensor> _repeat_bw(
 
     auto shape_wh = input.get_legacy_shape();
     TT_FATAL(shape_wh[0] == 1 && "input shape[0] should be 1");
+    auto ttnn_device = input.device();
     // input.get_legacy_shape()[0]
     // If repeat shape has 0's, it returns zeros of given input
     if (shape[0] == 0 || shape[1] == 0 || shape[2] == 0 || shape[3] == 0) {
@@ -1437,7 +1438,7 @@ std::vector<Tensor> _repeat_bw(
             grad,
             dim,
             true,
-            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout()),
+            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout(), std::optional<std::reference_wrapper<tt::tt_metal::Device>>(*ttnn_device), output_memory_config),
             output_memory_config);
         grad_tensor.emplace_back(result);
         return grad_tensor;
@@ -1450,7 +1451,7 @@ std::vector<Tensor> _repeat_bw(
             grad,
             dim,
             true,
-            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout()),
+            ttnn::operations::creation::zeros(required, input.get_dtype(), input.get_layout(), std::optional<std::reference_wrapper<tt::tt_metal::Device>>(*ttnn_device), output_memory_config),
             output_memory_config);
         grad_tensor.emplace_back(result);
         return grad_tensor;
