@@ -30,6 +30,7 @@ struct MaxPoolNewOp {
                                                                         padding.at(0), padding.at(1),
                                                                         dilation.at(0), dilation.at(1));
         auto output_shape = sliding_window_config.get_output_shape();
+        auto input_tensor_tmp = input_tensor;
 
         ParallelConfig parallel_config;
 
@@ -43,15 +44,15 @@ struct MaxPoolNewOp {
                                                 output_shape[2],
                                                 0,          // out_channels -- not used
                                                 device,
-                                                ShardOrientation::ROW_MAJOR);
+                                                ShardOrientation::ROW_MAJOR,
+                                                false);
 
             // log_debug("MaxPoolNewOp: Shard spec not found in input tensor. Executing sharding.");
-            auto input_tensor_tmp = input_tensor;
             auto sharded_mem_config = conv2d::create_sharded_memory_config_from_parallel_config(input_tensor.shape(), parallel_config, 1);
             auto input_tensor_sharded = ttnn::to_memory_config(input_tensor_tmp, sharded_mem_config, std::nullopt);
             ttnn::operations::core::deallocate(input_tensor_tmp);
             input_tensor_tmp = ttnn::operations::core::reallocate(input_tensor_sharded, input_tensor_sharded.memory_config());
-            memory_config = input_tensor.memory_config();
+            memory_config = input_tensor_tmp.memory_config();
         } else {
             // input is already sharded, use it as is
             const auto shard_grid = memory_config.shard_spec.value().grid;
@@ -80,7 +81,7 @@ struct MaxPoolNewOp {
                                                 parallel_config.grid);
         // call the halo uop
         uint32_t neg_inf_pad_val = 0xf7ff;
-        auto haloed_tensor = ttnn::operations::halo::halo_op(input_tensor, sliding_window_config, neg_inf_pad_val, false, parallel_config.shard_orientation == ShardOrientation::COL_MAJOR, 0, memory_config);
+        auto haloed_tensor = ttnn::operations::halo::halo_op(input_tensor_tmp, sliding_window_config, neg_inf_pad_val, false, parallel_config.shard_orientation == ShardOrientation::COL_MAJOR, 0, memory_config);
 
         MaxPoolNew::operation_attributes_t op_attr{
             .sliding_window_config_ = sliding_window_config,

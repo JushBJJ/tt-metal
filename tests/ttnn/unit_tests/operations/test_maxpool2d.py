@@ -147,7 +147,7 @@ def test_run_max_pool(
 
     ## this op expects input tensor as { N, 1, H * W, C }, so rearrange and reshape tensor
     ## but before that, make sure in_c is multiple of tile width
-    act_shape = (in_n, 1, in_h * in_w, in_c)
+    act_shape = (1, 1, in_n * in_h * in_w, in_c)
     act_permuted = torch.permute(act, (0, 2, 3, 1))
     act_reshaped = act_permuted.reshape(act_shape)
 
@@ -158,15 +158,13 @@ def test_run_max_pool(
     else:
         ttact = ttnn.from_torch(act_reshaped, dtype)
 
-    pconfig = determine_parallel_config(
-        True, in_n, in_c, out_h, out_w, in_c, device, config_override=None, is_out_tiled=False
-    )
-    sharded_mem_config = create_sharded_memory_config_from_parallel_config(act_reshaped.shape, pconfig, 1)
-
-    breakpoint()
+    # pconfig = determine_parallel_config(
+    #     True, in_n, in_c, out_h, out_w, in_c, device, config_override=None, is_out_tiled=False
+    # )
+    # sharded_mem_config = create_sharded_memory_config_from_parallel_config(act_reshaped.shape, pconfig, 1)
 
     ttact_device = ttnn.to_device(ttact, device)
-    ttact_device = ttnn.to_memory_config(ttact_device, sharded_mem_config)
+    # ttact_device = ttnn.to_memory_config(ttact_device, sharded_mem_config)
 
     output = ttnn.max_pool2d_new(
         input_tensor=ttact_device,
@@ -181,8 +179,8 @@ def test_run_max_pool(
         device=device,
     )
 
-    interleaved_mem_config = ttnn.MemoryConfig(ttnn.TensorMemoryLayout.INTERLEAVED, ttnn.BufferType.L1)
-    output = ttnn.to_memory_config(output, interleaved_mem_config)
+    # interleaved_mem_config = ttnn.MemoryConfig(ttnn.TensorMemoryLayout.INTERLEAVED, ttnn.BufferType.L1)
+    # output = ttnn.to_memory_config(output, interleaved_mem_config)
     output_host = output.cpu()
     output_pytorch_padded = ttnn.to_torch(output_host)
     output_pytorch = output_pytorch_padded[:, :, :, :in_c]

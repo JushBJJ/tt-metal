@@ -359,19 +359,27 @@ namespace tt::tt_metal::sliding_window {
         return sharded_input_top_left_indices;
     }
 
-    std::vector<uint16_t> flatten(const std::vector<std::vector<uint16_t>>& input) {
+    std::vector<uint16_t> flatten(const std::vector<std::vector<uint16_t>>& input, uint32_t extend_with_zeroes) {
         std::vector<uint16_t> flattened_vector;
         for (auto sub_vec : input) {
             flattened_vector.insert(flattened_vector.end(), sub_vec.begin(), sub_vec.end());
+            if (extend_with_zeroes > 0) {
+                std::vector<uint16_t> extend_v(extend_with_zeroes, 0);
+                flattened_vector.insert(flattened_vector.end(), extend_v.begin(), extend_v.end());
+            }
         }
+        log_debug(tt::LogOp, "flattened_vector size: {}", flattened_vector.size());
         return flattened_vector;
     }
 
     Tensor construct_on_host_config_tensor(const std::vector<std::vector<uint16_t>>& config, const SlidingWindowConfig& sw_config, const ParallelConfig& p_config) {
-        std::vector<uint16_t> config_vector = flatten(config);
-        Shape config_shape = {(uint32_t) config.size(), (uint32_t) config[0].size()};
+        // we need the last dim of tensors to be multiple of 2, pad if needed
+        uint32_t extend_with_zeroes = config[0].size() % 2;
+        Shape config_shape = {(uint32_t) config.size(), (uint32_t) config[0].size() + extend_with_zeroes};
+        std::vector<uint16_t> config_vector = flatten(config, extend_with_zeroes);
         if (p_config.shard_scheme == TensorMemoryLayout::HEIGHT_SHARDED) {
             auto config_buffer = owned_buffer::create<uint16_t>(std::move(config_vector));
+            log_debug(tt::LogOp, "config_shape: ({}, {})", config_shape[0], config_shape[1]);
             return Tensor(OwnedStorage{config_buffer}, config_shape, DataType::UINT16, Layout::ROW_MAJOR);
         } else if (p_config.shard_scheme == TensorMemoryLayout::BLOCK_SHARDED) {
             TT_ASSERT(p_config.grid.ranges().size() == 1, "BLOCK_SHARDED should have just a single core range");
@@ -403,6 +411,7 @@ namespace tt::tt_metal::sliding_window {
 
     Tensor move_config_tensor_to_device(const Tensor& config_tensor, const ParallelConfig& p_config, bool is_block_sharded, Device* device) {
         auto shard_shape = std::array<uint32_t, 2>({1, (uint32_t) config_tensor.get_shape()[-1]});
+        log_debug(tt::LogOp, "shard_shape: ({}, {})", shard_shape[0], shard_shape[1]);
         auto config_shard_orientation = is_block_sharded ? (p_config.shard_orientation == ShardOrientation::COL_MAJOR ? ShardOrientation::ROW_MAJOR : ShardOrientation::COL_MAJOR) : ShardOrientation::ROW_MAJOR;
         ShardSpec shard_spec(p_config.grid, shard_shape, config_shard_orientation, false);
         MemoryConfig memory_config{TensorMemoryLayout::HEIGHT_SHARDED, BufferType::L1_SMALL, shard_spec};
