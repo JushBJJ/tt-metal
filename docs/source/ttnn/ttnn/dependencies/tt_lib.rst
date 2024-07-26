@@ -391,8 +391,6 @@ Tensor creation operations
 
 .. autofunction:: tt_lib.tensor.empty
 
-.. autofunction:: tt_lib.tensor.tril
-
 .. autofunction:: tt_lib.tensor.triu
 
 Broadcast and Reduce
