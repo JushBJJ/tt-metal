@@ -1452,7 +1452,7 @@ def full(
     output_mem_config,
     **kwargs,
 ):
-    t1 = ttl.tensor.full(
+    t1 = ttnn.full(
         x.shape,
         scalar,
         layout=layout[0],

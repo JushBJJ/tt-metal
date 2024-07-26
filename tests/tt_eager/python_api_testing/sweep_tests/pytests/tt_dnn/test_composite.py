@@ -78,7 +78,6 @@ if is_wormhole_b0():
                 "zeros_like",
                 "ones",
                 "zeros",
-                "full",
                 "hardshrink",
                 "softshrink",
                 "sinh",

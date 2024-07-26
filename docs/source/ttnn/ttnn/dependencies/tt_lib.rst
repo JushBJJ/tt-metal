@@ -373,8 +373,6 @@ but in general retaining the data.
 Tensor creation operations
 ==========================
 
-.. autofunction:: tt_lib.tensor.full
-
 .. autofunction:: tt_lib.tensor.ones
 
 .. autofunction:: tt_lib.tensor.ones_like

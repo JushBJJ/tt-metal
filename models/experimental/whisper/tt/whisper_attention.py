@@ -5,6 +5,7 @@
 import torch
 import torch.nn as nn
 import tt_lib
+import ttnn
 from typing import Optional, Tuple, Union
 
 from models.utility_functions import torch2tt_tensor, tt2torch_tensor
@@ -114,7 +115,7 @@ class TtWhisperAttention(nn.Module):
         if q_proj_shape == self.cached_q_proj_shape:
             q_proj_mul_const = self.q_proj_mul_const
         else:
-            self.q_proj_mul_const = tt_lib.tensor.full(q_proj_shape, self.scaling)
+            self.q_proj_mul_const = ttnn.full(q_proj_shape, self.scaling)
             self.cached_q_proj_shape = q_proj_shape
             q_proj_mul_const = self.q_proj_mul_const
 

@@ -193,12 +193,12 @@ Tensor rpow(const Tensor& a, float k, const MemoryConfig& output_mem_config) {
 // use clip y = min( max( x, min_value), max_value) by broadcast
 // Ref: https://pytorch.org/docs/stable/generated/torch.clamp.html#torch.clamp
 Tensor _clip(const Tensor& a, float low, float high, const MemoryConfig& output_mem_config) {
-    const Tensor h_const = ttnn::full_like(a, high);
+    const Tensor h_const = ttnn::operations::creation::full_like(a, high);
     Tensor a_max = tt::tt_metal::min(a, h_const, output_mem_config);
     if (low == 0.0f) {
         return ttnn::relu(a_max, output_mem_config);
     } else {
-        const Tensor l_const = ttnn::full_like(a, low);
+        const Tensor l_const = ttnn::operations::creation::full_like(a, low);
         return tt::tt_metal::max(a_max, l_const, output_mem_config);
     }
 }
@@ -312,7 +312,7 @@ Tensor max(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& out
 
 Tensor _logical_andi(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
     if (std::fpclassify(immediate) == FP_ZERO) {
-        return ttnn::full_like(input_a, immediate);
+        return ttnn::operations::creation::full_like(input_a, immediate);
     } else {
         return ttnn::nez(input_a);
     }
@@ -511,7 +511,7 @@ Tensor _logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& 
     if (std::fpclassify(immediate) == FP_ZERO) {
         return ttnn::nez(input_a, output_mem_config);
     } else {
-        return ttnn::full_like(input_a, 1);
+        return ttnn::operations::creation::full_like(input_a, 1);
     }
 }
 Tensor logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
@@ -519,7 +519,7 @@ Tensor logical_ori(const Tensor& input_a, float immediate, const MemoryConfig& o
 }
 
 Tensor _logical_noti(const Tensor& input_a, float immediate, const MemoryConfig& output_mem_config) {
-    Tensor t_imm = ttnn::full_like(input_a, immediate);
+    Tensor t_imm = ttnn::operations::creation::full_like(input_a, immediate);
     Tensor result = ttnn::logical_not(t_imm, output_mem_config);
     return result;
 }
@@ -615,8 +615,8 @@ Tensor _addcdiv(
     t_div.deallocate();
     t_value.deallocate();
     Tensor result = ttnn::add(input_a, t_factor, std::nullopt, output_mem_config);
-    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity());
-    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""));
+    Tensor t_inf = ttnn::operations::creation::full_like(input_a, std::numeric_limits<float>::infinity());
+    Tensor t_nan = ttnn::operations::creation::full_like(input_a, std::nanf(""));
     return where(
         ttnn::eqz(input_c, output_mem_config),
         (value == 0) ? t_nan
@@ -651,8 +651,8 @@ Tensor _div(const Tensor& input_a, const Tensor& input_b, bool accurate_mode, st
         return result;
     }
 
-    Tensor t_inf = ttnn::full_like(input_a, std::numeric_limits<float>::infinity());
-    Tensor t_nan = ttnn::full_like(input_a, std::nanf(""));
+    Tensor t_inf = ttnn::operations::creation::full_like(input_a, std::numeric_limits<float>::infinity());
+    Tensor t_nan = ttnn::operations::creation::full_like(input_a, std::nanf(""));
     return where(
         ttnn::eqz(input_b, output_mem_config),
         where(
@@ -745,7 +745,7 @@ Tensor _unary_rdiv_trunc(
     const MemoryConfig& output_mem_config) {
     auto arch = input.device()->arch();
     TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
-    Tensor result = ttnn::multiply(ttnn::full_like(input, value), ttnn::reciprocal(input));
+    Tensor result = ttnn::multiply(ttnn::operations::creation::full_like(input, value), ttnn::reciprocal(input));
     return trunc(result);
 }
 Tensor unary_rdiv_trunc(
@@ -767,7 +767,7 @@ Tensor _round(const Tensor& input, int64_t decimals, const MemoryConfig& output_
     Tensor floor_res = ttnn::floor(input, output_mem_config);
     if (decimals != 0) {  // TODO: For decimal value!=0
         Tensor power_10 =
-            pow(ttnn::full_like(input, 10.0f), static_cast<float>(decimals), output_mem_config);
+            pow(ttnn::operations::creation::full_like(input, 10.0f), static_cast<float>(decimals), output_mem_config);
         Tensor rounded_non_half = ttnn::floor(
             ttnn::add(ttnn::multiply(input, power_10, std::nullopt, output_mem_config), 0.5, std::nullopt, output_mem_config),
             output_mem_config);
@@ -813,8 +813,8 @@ Tensor floor_div(const Tensor& input_a, const Tensor& input_b, const MemoryConfi
 
 Tensor _floor_div_overload(const Tensor& input, float value, const MemoryConfig& output_mem_config) {
     if (value == 0) {
-        Tensor t_inf = ttnn::full_like(input, std::numeric_limits<float>::infinity());
-        Tensor t_nan = ttnn::full_like(input, std::nanf(""));
+        Tensor t_inf = ttnn::operations::creation::full_like(input, std::numeric_limits<float>::infinity());
+        Tensor t_nan = ttnn::operations::creation::full_like(input, std::nanf(""));
         return where(
             ttnn::eqz(input, output_mem_config),
             t_nan,
@@ -830,7 +830,7 @@ Tensor floor_div(const Tensor& input_a, float value, const MemoryConfig& output_
 }
 
 Tensor _rfloor_div(float value, const Tensor& input, const MemoryConfig& output_mem_config) {
-    Tensor result = ttnn::multiply(ttnn::full_like(input, value), ttnn::reciprocal(input));
+    Tensor result = ttnn::multiply(ttnn::operations::creation::full_like(input, value), ttnn::reciprocal(input));
     return ttnn::floor(result, output_mem_config);
 }
 Tensor rfloor_div(float value, const Tensor& input, const MemoryConfig& output_mem_config) {
@@ -847,7 +847,7 @@ Tensor div_no_nan(const Tensor& input_a, const Tensor& input_b, const MemoryConf
 
 Tensor _div_no_nan_overload(const Tensor& input_a, float value, const MemoryConfig& output_mem_config) {
     if (value == 0)
-        return ttnn::full_like(input_a, 0.0f, output_mem_config);
+        return ttnn::operations::creation::full_like(input_a, 0.0f);
     else
         return ttnn::multiply(input_a, (1.0f/value));
 }
@@ -862,7 +862,7 @@ Tensor _remainder(const Tensor& input_a, const Tensor& input_b, const MemoryConf
     Tensor result = ttnn::subtract(a, ttnn::multiply(b, floor_div(input_a, input_b, output_mem_config), std::nullopt, output_mem_config), std::nullopt, output_mem_config);
     result = where(ttnn::ge(result, b), ttnn::subtract(result, b), result);
     result = where(ttnn::ltz(b), ttnn::add(result, b), result);
-    result = where(ttnn::eq(a, b, std::nullopt, output_mem_config), ttnn::full_like(input_a, 0.0f, output_mem_config), result, output_mem_config);
+    result = where(ttnn::eq(a, b, std::nullopt, output_mem_config), ttnn::operations::creation::full_like(input_a, 0.0f), result, output_mem_config);
     return ttnn::typecast(result, input_dtype);
 }
 Tensor remainder(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
@@ -874,7 +874,7 @@ Tensor _fmod(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& o
     Tensor a = ttnn::typecast(input_a, DataType::FLOAT32);
     Tensor b = ttnn::typecast(input_b, DataType::FLOAT32);
     Tensor result = ttnn::subtract(a, ttnn::multiply(div(input_a, input_b, true, "trunc", output_mem_config), b, std::nullopt, output_mem_config), std::nullopt, output_mem_config);
-    result = where(ttnn::eq(a, b, std::nullopt, output_mem_config), ttnn::full_like(input_a, 0.0f, output_mem_config), result, output_mem_config);
+    result = where(ttnn::eq(a, b, std::nullopt, output_mem_config), ttnn::operations::creation::full_like(input_a, 0.0f), result, output_mem_config);
     return ttnn::typecast(result, input_dtype);
 }
 Tensor fmod(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
@@ -883,8 +883,8 @@ Tensor fmod(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& ou
 
 // logit(input, eps)=log(input / 1 - input)
 Tensor _logit(const Tensor& input_a, float eps, const MemoryConfig& output_mem_config) {
-    Tensor t_eps = ttnn::full_like(input_a, eps, output_mem_config);
-    Tensor t1m_eps = ttnn::full_like(input_a, (1 - eps), output_mem_config);
+    Tensor t_eps = ttnn::operations::creation::full_like(input_a, eps);
+    Tensor t1m_eps = ttnn::operations::creation::full_like(input_a, (1 - eps));
     Tensor logit_input = where(
         ttnn::ltz(t_eps, output_mem_config),
         input_a,
@@ -951,7 +951,7 @@ Tensor logical_xori(const Tensor& input_a, float value, const MemoryConfig& outp
 
 // xlogy(x,y))=x*log(y)
 Tensor _xlogy(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
-    Tensor t_nan = ttnn::full_like(input_b, std::nanf(" "));
+    Tensor t_nan = ttnn::operations::creation::full_like(input_b, std::nanf(" "));
     Tensor result = ttnn::multiply(input_a, ttnn::log(input_b, output_mem_config), std::nullopt, output_mem_config);
     result = where(
         ttnn::logical_or(
@@ -1364,17 +1364,6 @@ Tensor ones(
     return tt::numpy::ones(shape, data_type, layout, device, output_mem_config);
 }
 
-// on-device tensor creation with shape and filled with value
-Tensor full(
-    const Shape shape,
-    float value,
-    DataType data_type,
-    Layout layout,
-    Device* device,
-    const MemoryConfig& output_mem_config) {
-    return tt::numpy::full(shape, value, data_type, layout, device, output_mem_config);
-}
-
 /**
  * outer product = matrix multiply when a = [1,1,N,1] and b = [1,1,1,M]
  * and result is of size [1,1,N,M].
@@ -1622,12 +1611,12 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                     tindex = tindex.to(input_a.device());
                     Tensor max_indices = ttnn::multiply(cmp_results, tindex, std::nullopt, output_mem_config);
                     cmp_results.deallocate();
-                    Tensor midx = ttnn::full_like(max_indices, size);
+                    Tensor midx = ttnn::operations::creation::full_like(max_indices, size);
                     Tensor result = where(ttnn::eqz(max_indices), midx, max_indices, output_mem_config);
                     max_indices.deallocate();
                     result = min(result, dim, output_mem_config);
                     Tensor res_index = zeros_like(result, output_mem_config);
-                    result = where(ttnn::eq(result, ttnn::full_like(result, size)), res_index, result, output_mem_config);
+                    result = where(ttnn::eq(result, ttnn::operations::creation::full_like(result, size)), res_index, result, output_mem_config);
                     res_index.deallocate();
                     if (is_channel) {
                         std::vector<int64_t> permute_dims = {1, 0, 2, 3};
