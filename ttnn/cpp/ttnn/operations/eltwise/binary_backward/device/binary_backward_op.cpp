@@ -273,21 +273,13 @@ std::vector<std::optional<Tensor>> _eq_bw(
     std::vector<std::optional<Tensor>> result;
 
     if (are_required_outputs.at(0)) {
-        if(input_grad.has_value()){
-            tt::tt_metal::zeros_like(cq_id, input, output_mem_config, input_grad);
-        } else {
-            input_grad = tt::tt_metal::zeros_like(cq_id, input, output_mem_config);
-        }
+        input_grad = ttnn::operations::creation::zeros_like(input, input.get_dtype(), input.get_layout(), std::nullopt, output_mem_config);
         result.emplace_back(input_grad);
     } else {
         result.emplace_back(std::nullopt);
     }
     if (are_required_outputs.at(1)) {
-        if(other_grad.has_value()){
-            tt::tt_metal::zeros_like(cq_id, input, output_mem_config, other_grad);
-        } else {
-            other_grad = tt::tt_metal::zeros_like(cq_id, input, output_mem_config);
-        }
+        other_grad = ttnn::operations::creation::zeros_like(grad, grad.get_dtype(), grad.get_layout(), std::nullopt, output_mem_config);
         result.emplace_back(other_grad);
     } else {
         result.emplace_back(std::nullopt);

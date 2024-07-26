@@ -42,7 +42,7 @@ std::vector<Tensor> _lamb_optimizer(const Tensor& data, const Tensor& grad, cons
     auto rmsnorm = [&output_mem_config](Tensor data) -> Tensor {
         Tensor data_val = ttnn::square(data, output_mem_config);
         data_val = global_sum(data_val,output_mem_config);
-        Tensor zeros = zeros_like(data, output_mem_config);
+        Tensor zeros = ttnn::operations::creation::zeros_like(data);
         data_val = ttnn::sqrt(ttnn::add(zeros, data_val,  std::nullopt, output_mem_config), output_mem_config);
         return data_val;
     };

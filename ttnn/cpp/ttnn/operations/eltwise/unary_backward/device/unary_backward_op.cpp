@@ -197,11 +197,7 @@ std::vector<std::optional<Tensor>> _pow_bw(uint8_t queue_id, const Tensor& grad,
     const float ZERO_THRESHOLD = std::numeric_limits<float>::epsilon() * 10.0f;
     TT_FATAL(exponent >= 0.0, "negative exponents are not supported; use recip(pow(input,abs(exponent)))");
     if (std::abs(exponent) < ZERO_THRESHOLD) {
-        if(input_grad.has_value()){
-            tt::tt_metal::zeros_like(queue_id, input, output_mem_config, input_grad);
-        } else {
-        input_grad = tt::tt_metal::zeros_like(queue_id, input, output_mem_config);
-        }
+        input_grad = ttnn::operations::creation::zeros_like(input);
         grad_tensor.emplace_back(input_grad);
         return grad_tensor;
     }
@@ -503,8 +499,8 @@ std::vector<Tensor> _fill_bw(const Tensor& grad, const Tensor& input, const std:
     std::vector<Tensor> grad_tensor;
     auto output_memory_config = output_mem_config.value_or(input.memory_config());
     Tensor val = grad;
-    val = global_sum(val, output_memory_config);
-    Tensor result = tt::tt_metal::zeros_like(grad, output_memory_config);
+    val = global_sum(val, output_mem_config);
+    Tensor result = ttnn::operations::creation::zeros_like(grad);
     result = ttnn::add(result, val, std::nullopt, output_mem_config);
     grad_tensor.emplace_back(result);
     return grad_tensor;

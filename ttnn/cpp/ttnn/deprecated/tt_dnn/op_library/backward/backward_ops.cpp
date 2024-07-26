@@ -83,7 +83,7 @@ std::vector<Tensor> _imag_bw(const Tensor& grad, const Tensor& input, const Memo
     CHECK_FOR_COMPLEX(input);
     std::vector<Tensor> grad_tensor;
     Tensor grad_result =
-        mk_complex(zeros_like(real(input, output_mem_config), output_mem_config), grad, output_mem_config);
+        mk_complex(ttnn::operations::creation::zeros_like(real(input, output_mem_config)), grad, output_mem_config);
     grad_tensor.emplace_back(grad_result);
     return grad_tensor;
 }
@@ -97,7 +97,7 @@ std::vector<Tensor> _real_bw(const Tensor& grad, const Tensor& input, const Memo
     CHECK_FOR_COMPLEX(input);
     std::vector<Tensor> grad_tensor;
     Tensor grad_result =
-        mk_complex(grad, zeros_like(imag(input, output_mem_config), output_mem_config), output_mem_config);
+        mk_complex(grad, ttnn::operations::creation::zeros_like(imag(input, output_mem_config)), output_mem_config);
     grad_tensor.emplace_back(grad_result);
     return grad_tensor;
 }
@@ -120,7 +120,7 @@ std::vector<Tensor> _angle_bw(
             output_mem_config);
         Tensor real = where(
             condition_zero,
-            zeros_like(inp_r, output_mem_config),
+            ttnn::operations::creation::zeros_like(inp_r),
             ttnn::multiply(grad,
                 ttnn::multiply(ttnn::neg(inp_i, output_mem_config), abs_squared, std::nullopt, output_mem_config),
                 std::nullopt,
@@ -128,7 +128,7 @@ std::vector<Tensor> _angle_bw(
             output_mem_config);
         Tensor imag = where(
             condition_zero,
-            zeros_like(inp_i, output_mem_config),
+            ttnn::operations::creation::zeros_like(inp_i),
             ttnn::multiply(grad, ttnn::multiply(inp_r, abs_squared, std::nullopt, output_mem_config), std::nullopt, output_mem_config),
             output_mem_config);
         condition_zero.deallocate();
@@ -140,7 +140,7 @@ std::vector<Tensor> _angle_bw(
         imag.deallocate();
         grad_tensor.emplace_back(grad_result);
     } else {
-        Tensor grad_result = zeros_like(grad, output_mem_config);
+        Tensor grad_result = ttnn::operations::creation::zeros_like(grad);
         grad_tensor.emplace_back(grad_result);
     }
     return grad_tensor;
@@ -160,7 +160,7 @@ std::vector<Tensor> _complex_abs_bw(const Tensor& grad, const Tensor& input, con
     Tensor grad_c = mk_complex(grad, grad, output_mem_config);
     Tensor grad_result = where(
         ttnn::eqz(result, output_mem_config),
-        zeros_like(result, output_mem_config),
+        ttnn::operations::creation::zeros_like(result),
         ttnn::multiply(grad_c,
             ttnn::multiply(input, ttnn::reciprocal(result, output_mem_config), std::nullopt, output_mem_config),
             std::nullopt,
@@ -186,7 +186,7 @@ std::vector<Tensor> _polar_bw(
     abs_result = mk_complex(abs_result, abs_result, output_mem_config);
     Tensor sgn_result = where(
         ttnn::eqz(abs_result, output_mem_config),
-        zeros_like(result, output_mem_config),
+        ttnn::operations::creation::zeros_like(result),
         ttnn::multiply(result, ttnn::reciprocal(abs_result, output_mem_config), std::nullopt, output_mem_config),
         output_mem_config);
     abs_result.deallocate();
@@ -194,7 +194,7 @@ std::vector<Tensor> _polar_bw(
         real(complex_mul(conj(grad, output_mem_config), sgn_result, output_mem_config), output_mem_config);
     sgn_result.deallocate();
     Tensor flip_tensor = mk_complex(
-        zeros_like(input_a, output_mem_config), ttnn::operations::creation::full_like(input_b, 1.0), output_mem_config);
+        ttnn::operations::creation::zeros_like(input_a), ttnn::operations::creation::full_like(input_b, 1.0), output_mem_config);
     Tensor grad_angle = real(
         complex_mul(
             conj(grad, output_mem_config), complex_mul(result, flip_tensor, output_mem_config), output_mem_config),

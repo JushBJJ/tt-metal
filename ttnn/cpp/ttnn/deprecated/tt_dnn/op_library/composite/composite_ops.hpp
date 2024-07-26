@@ -326,16 +326,6 @@ Tensor where(
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
     std::optional<Tensor> output_tensor = std::nullopt);
 
-// on-device tensor creation 0s like @reference_tensor
-Tensor zeros_like(
-    uint8_t queue_id,
-    const Tensor& reference_tensor,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor= std::nullopt);
-Tensor zeros_like(
-    const Tensor& reference_tensor,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-    std::optional<Tensor> output_tensor= std::nullopt);
 
 // on-device tensor creation 1s like @reference_tensor
 Tensor ones_like(

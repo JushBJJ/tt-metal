@@ -1315,19 +1315,6 @@ Tensor where(
         queue_id, predicate, value_true, value_false, output_mem_config, output_tensor);
 }
 
-// on-device tensor creation 0s like @reference_tensor
-Tensor zeros_like(
-    uint8_t queue_id,
-    const Tensor& reference_tensor,
-    const MemoryConfig& output_mem_config,
-    std::optional<Tensor> output_tensor) {
-    return mk_zero_tensor_like(reference_tensor, output_mem_config, output_tensor);
-}
-Tensor zeros_like(
-    const Tensor& reference_tensor, const MemoryConfig& output_mem_config, std::optional<Tensor> output_tensor) {
-    uint8_t default_queue_id = 0;
-    return mk_zero_tensor_like(default_queue_id, reference_tensor, output_mem_config, output_tensor);
-}
 
 // on-device tensor creation 1s like @reference_tensor
 Tensor ones_like(const Tensor& reference_tensor, const MemoryConfig& output_mem_config) {
@@ -1558,7 +1545,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                 if ((dim == (input_shape.rank() - 1)) || (dim == (input_shape.rank() - 2))) {
                     bool is_width = (dim == (input_shape.rank() - 1));
                     Tensor max_val = max(input_a, dim, output_mem_config);
-                    Tensor max_tensor = zeros_like(input_a, output_mem_config);
+                    Tensor max_tensor = ttnn::operations::creation::zeros_like(input_a);
                     Tensor tindex = tt::numpy::index_width<bfloat16>(
                         input_shape, DataType::BFLOAT16, Layout::TILE, input_a.device(), output_mem_config);
                     if (is_width) {
@@ -1577,7 +1564,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                     Tensor result = where(ttnn::eqz(max_indices), size, max_indices, output_mem_config);
                     max_indices.deallocate();
                     result = min(result, dim, output_mem_config);
-                    Tensor res_index = zeros_like(result, output_mem_config);
+                    Tensor res_index = ttnn::operations::creation::zeros_like(result);
                     result = where(ttnn::eq(result, size), res_index, result, output_mem_config);
                     std::vector<int64_t> permute_dims = {3, 0, 1, 2};
                     if (is_width) {
@@ -1615,7 +1602,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
                     Tensor result = where(ttnn::eqz(max_indices), midx, max_indices, output_mem_config);
                     max_indices.deallocate();
                     result = min(result, dim, output_mem_config);
-                    Tensor res_index = zeros_like(result, output_mem_config);
+                    Tensor res_index = ttnn::operations::creation::zeros_like(result);
                     result = where(ttnn::eq(result, ttnn::operations::creation::full_like(result, size)), res_index, result, output_mem_config);
                     res_index.deallocate();
                     if (is_channel) {
@@ -1632,7 +1619,7 @@ Tensor _argmax(const Tensor& input_t, int64_t _dim, bool all, const MemoryConfig
             Tensor tindex = tt::numpy::index_all<bfloat16>(
                 input_shape, DataType::BFLOAT16, Layout::TILE, input_a.device(), output_mem_config);
             Tensor max_val = global_max(input_a, output_mem_config);
-            Tensor max_tensor = zeros_like(input_a, output_mem_config);
+            Tensor max_tensor = ttnn::operations::creation::zeros_like(input_a);
             max_tensor = ttnn::add(max_tensor, max_val, std::nullopt, output_mem_config);
             max_val.deallocate();
             Tensor cmp_results = ttnn::eq(input_a, max_tensor, std::nullopt, output_mem_config);
