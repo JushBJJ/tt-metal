@@ -771,31 +771,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
 
-    m_tensor.def(
-        "arange",
-        &arange,
-        py::arg("start"),
-        py::arg("end"),
-        py::arg("step"),
-        py::arg("device") = nullptr,
-        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-        R"doc(
-            Returns a new 1D tensor with the incremented values in size specified by inputs ``start``, ``end`` and ``step``.
-
-            Inpute scalars are integers specifying start, end, and step sizes.
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "start", "Start", "int", "", "Yes"
-                "end", "End", "int", "> start", "Yes"
-                "step", "Step", "int", "> 0", "Yes"
-                "device", "Device tensor is placed on", "Device", "default is None (on host)", "No"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-        )doc");
-
-
 #if 0
         m_tensor.def("bitwise_complement", &bitwise_complement, R"doc(
             Returns tensor with the bitwise complement of elements of the input tensor ``arg0``.
