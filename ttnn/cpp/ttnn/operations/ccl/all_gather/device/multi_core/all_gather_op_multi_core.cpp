@@ -155,6 +155,7 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
     const std::optional<chip_id_t> sender_device_id,
     all_gather_op::Topology topology,
     const CoreCoord core_grid_offset) {
+    std::cout <<  "RING INDEX:::::::: " << ring_index << std::endl;
 
     TT_FATAL(!(receiver_device_id == std::nullopt && sender_device_id == std::nullopt), "At least one of receiver_device_id or sender_device_id must be specified");
 
@@ -426,6 +427,18 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
             counter_clockwise_link_buffer_num_messages_to_send.reserve(all_gather_config.get_num_eth_buffers_per_edm());
             edm_semaphores_base_address.reserve(all_gather_config.get_num_eth_buffers_per_edm());
             link_buffer_sender_addresses.reserve(all_gather_config.get_num_eth_buffers_per_edm());
+
+            ////////////// OVERLAP SETUP ///////////////
+
+            /*
+                Setup semaphores used to synchronize different receiver workers processing
+                different chunks across the same tensor slice
+            */
+            auto receiver_worker_sync_semaphore_addr = CreateSemaphore(program, receiver_workers, 0);
+            std::vector<CoreCoord> receiver_worker_cores_noc_coords;
+            for (uint32_t w = 0; w < receiver_worker_cores.size(); ++w) {
+                receiver_worker_cores_noc_coords.push_back(device->worker_core_from_logical_core(receiver_worker_cores.at(w)));
+            }
 
             {
                 for (std::size_t b = 0; b < all_gather_config.get_num_eth_buffers_per_edm(); b++) {
@@ -1112,6 +1125,9 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
 
                             return worker_receive_writer_ct_args;
                         } else {
+                            uint32_t slice_index = global_worker_index + direction * all_gather_config.get_num_eth_buffers_per_edm();
+                            bool overlap_op = true; // core_grid_offset.x != 0 || core_grid_offset.y != 0
+
                             std::vector<uint32_t> worker_writer_receiver_ct_args = {
                                 static_cast<uint32_t>(all_gather_config.is_output_dram()),
                                 static_cast<uint32_t>(receiver_worker_num_transfers.at(i).at(b)),
@@ -1136,8 +1152,24 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
                                 static_cast<uint32_t>(sender_worker_reader_semaphore_addr),
                                 static_cast<uint32_t>(is_clockwise_direction ? 1 : 0),
                                 static_cast<uint32_t>(cb_num_pages / 2),
-                                static_cast<uint32_t>(ring_size)
+                                static_cast<uint32_t>(ring_size),
+
+                                /* Overlap params */
+                                static_cast<bool>(overlap_op),
+                                static_cast<uint32_t>(global_num_workers),
+                                static_cast<uint32_t>(b),
+                                static_cast<uint32_t>(receiver_worker_sync_semaphore_addr)
                             };
+
+                            // std::cout << "global_worker_index: " << global_worker_index << " direction: " << direction << std::endl;
+                            // print all the tensor_slicer size
+                            std::cout << "num_rows: " << tensor_slicer.num_rows << " num_cols: " << tensor_slicer.num_cols << std::endl;
+                            std::cout << "row_idx: " << tensor_slicer.row_idx << " col_idx: " << tensor_slicer.col_idx << std::endl;
+                            std::cout << "row_offset: " << tensor_slicer.row_offset << " col_offset: " << tensor_slicer.col_offset << std::endl;
+                            std::cout << "output_page_offset: " << tensor_slicer.output_page_offset << " output_addr_offset: " << tensor_slicer.output_addr_offset << std::endl;
+                            std::cout << "last_output_page_offset: " << last_output_page_offset << " last_output_addr_offset: " << last_output_addr_offset << std::endl;
+                            std::cout << "receiver_output_start_page_idx: " << receiver_output_start_page_idx << " receiver_output_start_addr_offset: " << receiver_output_start_addr_offset << std::endl;
+
 
                             log_trace(tt::LogOp, "Worker {} RW ct args", b);
                             log_trace(tt::LogOp, "\tall_gather_config.is_output_dram(): {}", all_gather_config.is_output_dram());
@@ -1164,6 +1196,10 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
                             log_trace(tt::LogOp, "\tis_clockwise_direction ? 1 : 0: {}", is_clockwise_direction ? 1 : 0);
                             log_trace(tt::LogOp, "\thalf_cb_num_pages: {}", cb_num_pages / 2);
                             log_trace(tt::LogOp, "\tring_size: {}", ring_size);
+                            log_trace(tt::LogOp, "\tOverlapped Op: {}", overlap_op);
+                            log_trace(tt::LogOp, "\tglobal_num_workers: {}", global_num_workers);
+                            log_trace(tt::LogOp, "\tcurr_worker_index: {}", b);
+                            log_trace(tt::LogOp, "\treceiver_worker_sync_semaphore_addr: {}", receiver_worker_sync_semaphore_addr);
                             return worker_writer_receiver_ct_args;
                         }
                     };
@@ -1224,6 +1260,13 @@ operation::ProgramWithCallbacks all_gather_multi_core_with_workers_helper(
                                 static_cast<uint32_t>(worker_sender_reader.x),
                                 static_cast<uint32_t>(worker_sender_reader.y),
                             };
+
+                            // Push the receiver worker core noc coordinates
+                            for (auto& noc_coord : receiver_worker_cores_noc_coords) { // Should run global_num_workers times
+                                worker_writer_receiver_rt_args.push_back(static_cast<uint32_t>(noc_coord.x));
+                                worker_writer_receiver_rt_args.push_back(static_cast<uint32_t>(noc_coord.y));
+                            }
+
 
                             log_trace(tt::LogOp, "Worker {} RW rt args", b);
                             log_trace(tt::LogOp, "\toutput_buffer->address(): {}", output_buffer->address());
