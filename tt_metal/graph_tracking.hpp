@@ -39,6 +39,8 @@ std::vector<std::optional<ttnn::Tensor>> gather_tensors(Args&&... args) {
 }
 */
 namespace tt::tt_metal {
+
+    //class
     class GraphTracker {
     private:
         int depth = 0;
@@ -75,6 +77,18 @@ namespace tt::tt_metal {
         void track_end_op() {
             tt::log_info( "Called End Op");
             depth--;
+        }
+
+        bool hook_allocate(Buffer* buffer, uint64_t size, bool bottom_up) {
+            return false;
+        }
+
+        bool hook_deallocate(Buffer* buffer) {
+            return false;
+        }
+
+        bool block_run_program() {
+            return true;
         }
     private:
         GraphTracker() = default;

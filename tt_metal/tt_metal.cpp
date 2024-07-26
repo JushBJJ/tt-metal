@@ -509,6 +509,7 @@ void LaunchProgram(Device *device, std::shared_ptr<Program> program, bool wait_u
 }
 
 void LaunchProgram(Device *device, Program &program, bool wait_until_cores_done) {
+
     {  // Profiler scope start
         ZoneScoped;
         detail::DispatchStateCheck(false);

@@ -15,7 +15,7 @@
 #include "tt_stl/concepts.hpp"
 #include "tt_stl/reflection.hpp"
 #include "tt_stl/unique_any.hpp"
-
+#include "tt_metal/graph_tracking.hpp"
 namespace ttnn {
 
 namespace device_operation {
@@ -260,6 +260,7 @@ typename device_operation_t::tensor_return_value_t run(
     const typename device_operation_t::operation_attributes_t& operation_attributes,
     const typename device_operation_t::tensor_args_t& tensor_args) {
     ZoneScopedN("TT_DNN_DEVICE_OP");
+
     auto operation_id = assign_operation_id();
 
     tt::stl::reflection::visit_object_of_type<Tensor>(check_tensor_types, tensor_args);
@@ -289,6 +290,10 @@ typename device_operation_t::tensor_return_value_t run(
     }();
 
     tt::stl::reflection::visit_object_of_type<Tensor>(check_tensor_types, tensor_return_value);
+
+    if(GraphTracker::instance().block_run_program()) {
+        return tensor_return_value;
+    }
 
     auto& program = create_or_get_program_from_cache<device_operation_t>(
         program_cache, program_cache_hit, program_hash, operation_attributes, tensor_args, tensor_return_value);
