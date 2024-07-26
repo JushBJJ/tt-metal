@@ -33,8 +33,9 @@ import tt_lib
 @pytest.mark.parametrize(
     "kv_cache_len, expected_compile_time, expected_inference_time",
     (
-        (32, 6, 0.105),
-        (1024, 6, 0.225),
+        (32, 6, 0.135),
+        (128, 6, 0.155),
+        (1024, 6, 0.215),
     ),
 )
 def test_llama_model_perf(
@@ -45,7 +46,7 @@ def test_llama_model_perf(
     model_args = TtModelArgs(device)
     tokenizer = Tokenizer(model_args.tokenizer_path)
 
-    model_args.n_layers = 1
+    model_args.n_layers = 32
     # Clear global profiler state before starting measurements
     profiler.clear()
 
