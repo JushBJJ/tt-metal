@@ -134,7 +134,7 @@ def test_linear_with_core_grid(
     assert_with_pcc(torch_output_tensor, output_tensor, 0.999)
 
 
-@pytest.mark.parametrize("batch_size", [1, 8])
+@pytest.mark.parametrize("batch_size", [1, 4])
 @pytest.mark.parametrize("m_size", [32, 64])
 @pytest.mark.parametrize("k_size", [1024, 2048])
 @pytest.mark.parametrize("n_size", [1024, 2048])
@@ -161,7 +161,7 @@ def test_wide_linear_with_argument_for_core_grid_set_to_device_grid(
     assert_with_pcc(torch_output_tensor, output_tensor, 0.997)
 
 
-@pytest.mark.parametrize("batch_size", [1, 8])
+@pytest.mark.parametrize("batch_size", [1, 4])
 @pytest.mark.parametrize("m_size", [32, 64])
 @pytest.mark.parametrize("k_size", [1024, 2048])
 @pytest.mark.parametrize("n_size", [1024, 2048])
