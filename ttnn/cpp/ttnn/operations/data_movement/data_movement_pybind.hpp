@@ -13,7 +13,7 @@
 #include "ttnn/operations/data_movement/pad/pad_pybind.hpp"
 #include "ttnn/operations/data_movement/permute/permute_pybind.hpp"
 #include "ttnn/operations/data_movement/downsample/downsample_op_pybind.hpp"
-#include "ttnn/operations/data_movement/upsample/upsample_pybind.hpp"
+#include "ttnn/operations/pool/upsample/upsample_pybind.hpp"
 #include "ttnn/operations/data_movement/slice/slice_pybind.hpp"
 #include "ttnn/operations/data_movement/tilize/tilize_pybind.hpp"
 #include "ttnn/operations/data_movement/tilize_with_val_padding/tilize_with_val_padding_pybind.hpp"
@@ -23,26 +23,6 @@ namespace py = pybind11;
 namespace ttnn {
 namespace operations {
 namespace data_movement {
-
-/*void bind_upsample(py::module& module) {
-    const auto doc = R"doc(
- Upsamples a given multi-channel 2D (spatial) data.
- The input data is assumed to be of the form [N, H, W, C].
-
- The algorithms available for upsampling are 'nearest' for now.
-
- Args:
-     * :attr:`input_tensor`: the input tensor
-     * :attr:`scale_factor`: multiplier for spatial size. Has to match input size if it is a tuple.
-     )doc";
-
-    ttnn::bind_registered_operation(
-        module,
-        ttnn::upsample,
-        doc,
-        ttnn::pybind_arguments_t{
-            py::arg("input_tensor"), py::arg("scale_factor"), py::arg("memory_config") = std::nullopt});
-}*/
 
 void bind_repeat_interleave(py::module& module) {
     auto doc = R"doc(

@@ -1,26 +1,16 @@
-// SPDX-FileCopyrightText: © 2024 Tenstorrent Inc.
+// SPDX-FileCopyrightText: © 2023 Tenstorrent Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#pragma once
 
-#include "ttnn/tensor/types.hpp"
-#include "ttnn/operations/core/core.hpp"
+#include "upsample.hpp"
 
-#include "ttnn/run_operation.hpp"
 
-#include "device/upsample_op.hpp"
-#include "ttnn/operations/data_movement/upsample/device/upsample_op.hpp"
+namespace ttnn::operations::data_movement {
 
-namespace ttnn {
-namespace operations {
-namespace data_movement {
-
-struct ExecuteUpSample {
-    static ttnn::Tensor operator()(
-        const ttnn::Tensor& input_tensor,
+ttnn::Tensor ExecuteUpSample::operator()(const ttnn::Tensor& input_tensor,
         std::variant<int, std::array<int, 2>, std::array<int, 3>, std::array<int, 4>> scale_factor,
-        std::optional<MemoryConfig> output_mem_config = std::nullopt) {
+        std::optional<MemoryConfig> output_mem_config) {
         MemoryConfig mem_config = output_mem_config.value_or(ttnn::DRAM_MEMORY_CONFIG);
 
         int scale_h = 1;
@@ -69,16 +59,11 @@ struct ExecuteUpSample {
             }
         }
 
-        //return ttnn::operations::data_movement::upsample(input_tensor, scale_h, scale_w, mem_config);
+        //return ttnn::upsample(input_tensor, scale_h, scale_w, mem_config);
         auto output_tensor = operation::run(
             UpSample{scale_h, scale_w, mem_config},
             {input_tensor}).front();
         return output_tensor;
     }
-};
-} // data_movement
-} // operations
-// constexpr auto upsample = ttnn::
-//     register_operation_with_auto_launch_op<"ttnn::upsample", ttnn::operations::data_movement::ExecuteUpsample>();
-constexpr auto upsample = ttnn::register_operation_with_auto_launch_op<"ttnn::upsample", ttnn::operations::data_movement::ExecuteUpSample>();
-} // data_movement
+
+}  // namespace data_movement

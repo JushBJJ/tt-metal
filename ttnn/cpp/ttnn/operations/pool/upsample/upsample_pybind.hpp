@@ -12,6 +12,7 @@
 #include "upsample.hpp"
 
 namespace ttnn::operations::data_movement::detail {
+
 namespace py = pybind11;
 
 void bind_upsample(py::module& module) {
