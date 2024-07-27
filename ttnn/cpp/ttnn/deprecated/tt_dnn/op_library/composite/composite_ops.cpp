@@ -125,56 +125,6 @@ Tensor swish(const Tensor& a, const MemoryConfig& output_mem_config) {
 }
 
 
-// tanhshrink(x) = x - tanh(x)
-Tensor _tanhshrink(const Tensor& x, const MemoryConfig& output_mem_config) {
-    Tensor tan_x = ttnn::tanh(x, output_mem_config);
-    Tensor result = ttnn::subtract(x, tan_x, std::nullopt, output_mem_config);
-    return result;
-}
-Tensor tanhshrink(const Tensor& a, const MemoryConfig& output_mem_config) {
-    return operation::decorate_as_composite(__func__, _tanhshrink)(a, output_mem_config);
-}
-
-// Theano defines this differently...
-/**
- *
- *   alpha = 1.6732632423543772848170429916717
- *    scale = 1.0507009873554804934193349852946
- *    return scale * elu(x, alpha)
- *
- */
-// Function Selu - scaled exponential linear
-// use transformation y = scale *(max(0,x)) + min(0,alpha * (exp(X)-1)) by broadcast
-// Ref: https://pytorch.org/docs/stable/generated/torch.nn.SELU.html
-Tensor _selu(const Tensor& x, const float scale, const float alpha, const MemoryConfig& output_mem_config) {
-    // term 2
-    Tensor x_Exp = ttnn::exp(x, false, output_mem_config);
-    Tensor minus_one = ttnn::operations::creation::create_scalar(-1.0f, x.get_dtype(), Layout::TILE, x.device());
-    Tensor x_Exp_minus_1 = ttnn::add(x_Exp, minus_one,std::nullopt, output_mem_config);
-    x_Exp.deallocate();
-    minus_one.deallocate();
-    Tensor t_alpha = ttnn::operations::creation::create_scalar(alpha, x.get_dtype(), Layout::TILE, x.device());
-    Tensor result_t2_ = ttnn::multiply(x_Exp_minus_1, t_alpha, std::nullopt, output_mem_config);
-    x_Exp_minus_1.deallocate();
-    t_alpha.deallocate();
-    Tensor result_term2 =
-        ttnn::multiply(ttnn::gtz(result_t2_, output_mem_config), result_t2_, std::nullopt, output_mem_config);
-    result_t2_.deallocate();
-
-    // term 1
-    Tensor t_scale = ttnn::operations::creation::create_scalar(scale, x.get_dtype(), Layout::TILE, x.device());
-    Tensor x_relu = ttnn::relu(x, output_mem_config);
-    Tensor result_term1 = ttnn::multiply(x_relu, t_scale, std::nullopt, output_mem_config);
-    t_scale.deallocate();
-    x_relu.deallocate();
-    Tensor result_selu = ttnn::add(result_term1, result_term2, std::nullopt, output_mem_config);
-
-    return result_selu;
-}
-Tensor selu(const Tensor& x, const float scale, const float alpha, const MemoryConfig& output_mem_config) {
-    return operation::decorate_as_composite(__func__, _selu)(x, scale, alpha, output_mem_config);
-}
-
 // ELU :
 //  Theano defines it as,
 //  return tensor.switch(x > 0, x, alpha * tensor.expm1(x))
@@ -642,7 +592,7 @@ Tensor _div(const Tensor& input_a, const Tensor& input_b, bool accurate_mode, st
     TT_FATAL((round_mode == "None" || round_mode == "trunc" || round_mode == "floor") && "Incorrect rounding mode (expected 'None', 'trunc', or 'floor')");
     Tensor result = ttnn::divide(input_a, input_b);
     if(round_mode == "trunc"){
-        result = trunc(result);
+        result = ttnn::trunc(result);
     }
     else if(round_mode == "floor"){
         result = ttnn::floor(result);
@@ -673,7 +623,7 @@ Tensor _div_overload(const Tensor& input_a, float scalar, bool accurate_mode, st
     Tensor result = ttnn::multiply(input_a, (1.0f/scalar));
 
     if(round_mode == "trunc"){
-        result = trunc(result);
+        result = ttnn::trunc(result);
     }
     else if(round_mode == "floor"){
         result = ttnn::floor(result);
@@ -685,22 +635,11 @@ Tensor div(const Tensor& input_a, float scalar, bool accurate_mode, string round
     return operation::decorate_as_composite(__func__, _div_overload)(input_a, scalar, accurate_mode, round_mode, output_mem_config);
 }
 
-Tensor _trunc(const Tensor& input, const MemoryConfig& output_mem_config) {
-    auto arch = input.device()->arch();
-    TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
-    Tensor floor_res = ttnn::floor(input, output_mem_config);
-    Tensor trunc_res = where(ttnn::ne(input, floor_res), ttnn::add(floor_res, 1.0f), floor_res, output_mem_config);
-    Tensor result = where(ttnn::gtz(input, output_mem_config), floor_res, trunc_res, output_mem_config);
-    return result;
-}
-Tensor trunc(const Tensor& input, const MemoryConfig& output_mem_config) {
-    return operation::decorate_as_composite(__func__, _trunc)(input, output_mem_config);
-}
 
 Tensor _frac(const Tensor& input, const MemoryConfig& output_mem_config) {
     auto arch = input.device()->arch();
     TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
-    Tensor trunc_res = trunc(input, output_mem_config);
+    Tensor trunc_res = ttnn::trunc(input, output_mem_config);
     Tensor result = ttnn::subtract(input, trunc_res, std::nullopt, output_mem_config);
     return result;
 }
@@ -715,7 +654,7 @@ Tensor _div_trunc(
     auto arch = input_a.device()->arch();
     TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
     Tensor result = div(input_a, input_b, true);
-    return trunc(result);
+    return ttnn::trunc(result);
 }
 Tensor div_trunc(
     const Tensor& input_a,
@@ -731,7 +670,7 @@ Tensor _div_trunc_overload(
     auto arch = input.device()->arch();
     TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
     Tensor result = ttnn::multiply(input, (1 / value));
-    return trunc(result);
+    return ttnn::trunc(result);
 }
 Tensor div_trunc(
     const Tensor& input,
@@ -747,7 +686,7 @@ Tensor _unary_rdiv_trunc(
     auto arch = input.device()->arch();
     TT_FATAL(arch == tt::ARCH::WORMHOLE_B0, "Op is only supported on Wormhole");
     Tensor result = ttnn::multiply(ttnn::full_like(input, value), ttnn::reciprocal(input));
-    return trunc(result);
+    return ttnn::trunc(result);
 }
 Tensor unary_rdiv_trunc(
     float value,
@@ -948,25 +887,6 @@ Tensor _logical_xori(const Tensor& input_a, float value, const MemoryConfig& out
 }
 Tensor logical_xori(const Tensor& input_a, float value, const MemoryConfig& output_mem_config) {
     return operation::decorate_as_composite(__func__, _logical_xori)(input_a, value, output_mem_config);
-}
-
-// xlogy(x,y))=x*log(y)
-Tensor _xlogy(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
-    Tensor t_nan = full_like(input_b, std::nanf(" "), output_mem_config);
-    Tensor result = ttnn::multiply(input_a, ttnn::log(input_b, output_mem_config), std::nullopt, output_mem_config);
-    result = where(
-        ttnn::logical_or(
-            ttnn::ltz(input_b, output_mem_config),
-            ttnn::eq(input_b, t_nan, std::nullopt, output_mem_config),
-            std::nullopt,
-            output_mem_config),
-        t_nan,
-        result,
-        output_mem_config);
-    return result;
-}
-Tensor xlogy(const Tensor& input_a, const Tensor& input_b, const MemoryConfig& output_mem_config) {
-    return operation::decorate_as_composite(__func__, _xlogy)(input_a, input_b, output_mem_config);
 }
 
 // Celu

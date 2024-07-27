@@ -56,15 +56,6 @@ Tensor mac(
 Tensor mac(
     const Tensor& a, float b, float c, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// Function Selu - scaled exponential linear
-// use transformation y = scale * alpha * (exp(X)-1) by broadcast
-// Ref: https://pytorch.org/docs/stable/generated/torch.nn.SELU.html
-Tensor selu(
-    const Tensor& x,
-    const float scale = 1.0507009873554804934193349852946,
-    const float alpha = 1.6732632423543772848170429916717,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 Tensor celu(
     const Tensor& x, float alpha, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
@@ -89,10 +80,6 @@ Tensor max(
     const Tensor& input_a,
     const Tensor& input_b,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// tanhshrink = x - tanh(x)
-Tensor tanhshrink(
-    const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 Tensor logical_andi(
     const Tensor& input_a,
@@ -164,8 +151,6 @@ Tensor fmod(
     const Tensor& input_b,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-Tensor trunc(const Tensor& input, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 Tensor frac(
     const Tensor& input,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
@@ -188,12 +173,6 @@ Tensor floor_div(
 Tensor rfloor_div(
     float value,
     const Tensor& input,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// xlogy(x,y))=x*log(y)
-Tensor xlogy(
-    const Tensor& input_a,
-    const Tensor& input_b,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 // logical_noti

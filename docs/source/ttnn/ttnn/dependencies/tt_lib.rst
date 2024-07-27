@@ -298,8 +298,6 @@ Tensor elementwise operations
 
 .. autofunction:: tt_lib.tensor.sinh
 
-.. autofunction:: tt_lib.tensor.tanhshrink
-
 .. autofunction:: tt_lib.tensor.remainder
 
 .. autofunction:: tt_lib.tensor.fmod
@@ -329,8 +327,6 @@ Tensor elementwise operations
 .. autofunction:: tt_lib.tensor.logical_ori
 
 .. autofunction:: tt_lib.tensor.polygamma
-
-.. autofunction:: tt_lib.tensor.trunc
 
 .. autofunction:: tt_lib.tensor.frac
 
@@ -569,8 +565,6 @@ Other Operations
 .. autofunction:: tt_lib.tensor.fill_ones_rm
 
 .. autofunction:: tt_lib.tensor.convert_conv_weight_tensor_to_tiled_layout
-
-.. autofunction:: tt_lib.tensor.xlogy
 
 .. autofunction:: tt_lib.tensor.addcmul
 
