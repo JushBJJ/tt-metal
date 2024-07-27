@@ -1477,19 +1477,6 @@ Tensor sfpu_eps(const Shape shape, Layout layout, Device* device, const MemoryCo
     return operation::decorate_as_composite(__func__, _sfpu_eps)(shape, layout, device, output_mem_config);
 }
 
-// triu : select upper triangular region of input matrix
-Tensor _triu(const Tensor& input_a, int32_t diag, const MemoryConfig& output_mem_config) {
-    Tensor index_u = tt::numpy::index_triu<bfloat16>(
-        input_a.get_legacy_shape(), diag, DataType::BFLOAT16, Layout::TILE, input_a.device(), output_mem_config);
-    return ttnn::multiply(input_a, index_u, std::nullopt, output_mem_config);
-}
-Tensor triu(
-    const Tensor& input_a,
-    int32_t dim /* = -1 */,
-    const MemoryConfig& output_mem_config /* = operation::DEFAULT_OUTPUT_MEMORY_CONFIG */) {
-    return operation::decorate_as_composite(__func__, _triu)(input_a, dim, output_mem_config);
-}
-
 Tensor _power_fp(uint8_t queue_id, const Tensor& input_a, float exponent, const MemoryConfig& output_mem_config, std::optional<Tensor> output_tensor) {
     TT_FATAL(exponent >= 0.0f, "works for positive exponents only");
     const uint32_t exponent_floor = static_cast<uint32_t>(std::floor(exponent));

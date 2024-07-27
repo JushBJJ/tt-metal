@@ -487,12 +487,6 @@ Tensor logical_ori(
 // on-device tensor creation with shape and filled with value
 Tensor sfpu_eps(const Shape shape, Layout layout, Device* device, const MemoryConfig& output_mem_config);
 
-// triu : select upper triangular region of input matrix
-Tensor triu(
-    const Tensor& input_a,
-    int32_t diag = 0,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // power_fp : power with floating point exponent
 Tensor power_fp(
     uint8_t queue_id,
