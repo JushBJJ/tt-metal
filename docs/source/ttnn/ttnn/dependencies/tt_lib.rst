@@ -584,8 +584,6 @@ Other Operations
 
 .. autofunction:: tt_lib.tensor.pow
 
-.. autofunction:: tt_lib.tensor.argmax
-
 Loss Functions
 ==============
 

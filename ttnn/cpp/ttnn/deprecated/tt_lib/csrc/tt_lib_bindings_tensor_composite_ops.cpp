@@ -352,30 +352,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         R"doc("Scalar", "float", "")doc");
 
     m_tensor.def(
-        "argmax",
-        &argmax,
-        py::arg("input").noconvert(),
-        py::arg("dim"),
-        py::arg("all") = false,
-        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-        R"doc(
-            Returns the indices of the maximum value of elements in the ``input`` tensor
-            If ``all`` is set to ``true`` irrespective of given dimension it will return the indices of maximum value of all elements in given ``input``
-
-            Input tensor must have BFLOAT16 data type.
-
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "input", "Tensor argmax is applied to", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
-                "dim", "Dimension to perform argmax", "int", "", "Yes"
-                "all", "Consider all dimension (ignores ``dim`` param)", "bool", "default to false", "No"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-        )doc");
-
-    m_tensor.def(
         "hardtanh",
         &hardtanh,
         py::arg("input").noconvert(),
