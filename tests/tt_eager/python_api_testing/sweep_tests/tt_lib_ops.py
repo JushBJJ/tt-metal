@@ -273,10 +273,9 @@ def eltwise_leaky_relu(
 
 
 @setup_host_and_device
-def eltwise_logical_noti(
+def eltwise_logical_not_(
     x,
     *args,
-    immediate,
     device,
     dtype,
     layout,
@@ -285,7 +284,7 @@ def eltwise_logical_noti(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.logical_noti(t0, immediate, output_mem_config=output_mem_config)
+    t1 = ttnn.logical_not_(t0, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -303,7 +302,7 @@ def eltwise_hardshrink(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.hardshrink(t0, _lambda, output_mem_config=output_mem_config)
+    t1 = ttnn.hardshrink(t0, lambd=_lambda, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -321,7 +320,7 @@ def eltwise_softshrink(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.softshrink(t0, _lambda, output_mem_config=output_mem_config)
+    t1 = ttnn.softshrink(t0, lambd=_lambda, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -801,7 +800,7 @@ def eltwise_celu(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t2 = ttl.tensor.celu(t0, alpha, output_mem_config=output_mem_config)
+    t2 = ttnn.celu(t0, alpha=alpha, memory_config=output_mem_config)
 
     return tt2torch_tensor(t2)
 
@@ -809,7 +808,7 @@ def eltwise_celu(
 @setup_host_and_device
 def eltwise_logit(x, *args, eps, device, dtype, layout, input_mem_config, output_mem_config, **kwargs):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.logit(t0, eps, output_mem_config=output_mem_config)
+    t1 = ttnn.logit(t0, eps=eps, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -823,10 +822,10 @@ def eltwise_polygamma(x, *args, k, device, dtype, layout, input_mem_config, outp
 
 
 @setup_host_and_device
-def eltwise_logical_xori(
+def eltwise_logical_xor_(
     x,
+    y,
     *args,
-    immediate,
     device,
     dtype,
     layout,
@@ -835,9 +834,10 @@ def eltwise_logical_xori(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.logical_xori(t0, immediate, output_mem_config=output_mem_config)
+    t1 = setup_tt_tensor(y, device, layout[1], input_mem_config[1], dtype[1])
+    t2 = ttnn.logical_xor_(t0, t1, memory_config=output_mem_config)
 
-    return tt2torch_tensor(t1)
+    return tt2torch_tensor(t2)
 
 
 @setup_host_and_device
@@ -1573,10 +1573,10 @@ def prod(
 
 
 @setup_host_and_device
-def eltwise_logical_andi(
+def eltwise_logical_and_(
     x,
+    y,
     *args,
-    immediate,
     device,
     dtype,
     layout,
@@ -1585,16 +1585,17 @@ def eltwise_logical_andi(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.logical_andi(t0, immediate, output_mem_config=output_mem_config)
+    t1 = setup_tt_tensor(y, device, layout[1], input_mem_config[1], dtype[1])
+    t2 = ttnn.logical_and_(t0, t1, memory_config=output_mem_config)
 
-    return tt2torch_tensor(t1)
+    return tt2torch_tensor(t2)
 
 
 @setup_host_and_device
-def eltwise_logical_ori(
+def eltwise_logical_or_(
     x,
+    y,
     *args,
-    immediate,
     device,
     dtype,
     layout,
@@ -1603,9 +1604,10 @@ def eltwise_logical_ori(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.logical_ori(t0, immediate, output_mem_config=output_mem_config)
+    t1 = setup_tt_tensor(y, device, layout[1], input_mem_config[1], dtype[1])
+    t2 = ttnn.logical_or_(t0, t1, memory_config=output_mem_config)
 
-    return tt2torch_tensor(t1)
+    return tt2torch_tensor(t2)
 
 
 @setup_host_and_device
@@ -2305,7 +2307,7 @@ def eltwise_rpow(
 ):
     factor = kwargs["factor"]
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttl.tensor.rpow(t0, factor, output_mem_config=output_mem_config)
+    t1 = ttnn.rpow(t0, factor, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -2545,7 +2547,7 @@ transpose_cw = make_unary_op(partial(ttl.tensor.transpose, dim0=1, dim1=-1))
 eltwise_floor = make_unary_op_optional_output(ttnn.floor)
 eltwise_ceil = make_unary_op_optional_output(ttnn.ceil)
 eltwise_trunc = make_unary_op(ttl.tensor.trunc)
-eltwise_frac = make_unary_op(ttl.tensor.frac)
+eltwise_frac = make_ttnn_unary_op(ttnn.frac)
 
 
 def make_binary_op(ttl_tensor_binop):

@@ -26,16 +26,6 @@ using binary_tensor_op_t = Tensor(const Tensor& a, const Tensor& b);
 
 // Note: inline doesn't allow pybind to work well so we keep few function not inlined.
 
-// Function: softshrink
-// Ref: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html
-Tensor softshrink(
-    const Tensor& a, float param, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// Function: hardshrink
-// Ref: https://pytorch.org/docs/stable/generated/torch.nn.Hardshrink.html
-Tensor hardshrink(
-    const Tensor& a, float param, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // Function: bias gelu
 // Ref: http://www.xavierdupre.fr/app/mlprodict/helpsphinx/onnxops/onnx_commicrosoft_BiasGelu.html
 Tensor bias_gelu_unary(
@@ -65,9 +55,6 @@ Tensor selu(
     const float alpha = 1.6732632423543772848170429916717,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-Tensor celu(
-    const Tensor& x, float alpha, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // Function Swish = same as SILU
 // use transformation y = x * sigmoid( x ) by broadcast
 Tensor swish(const Tensor& a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
@@ -93,11 +80,6 @@ Tensor max(
 // tanhshrink = x - tanh(x)
 Tensor tanhshrink(
     const Tensor& input_a, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-Tensor logical_andi(
-    const Tensor& input_a,
-    float immediate,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 // addcmul(input,tensor1,tensor2,value)=input+value×tensor1×tensor2
 Tensor addcmul(
@@ -166,10 +148,6 @@ Tensor fmod(
 
 Tensor trunc(const Tensor& input, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-Tensor frac(
-    const Tensor& input,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 Tensor round(
     const Tensor& input,
     int64_t decimals = 0,
@@ -195,13 +173,6 @@ Tensor xlogy(
     const Tensor& input_a,
     const Tensor& input_b,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-// logical_noti
-Tensor logical_noti(
-    const Tensor& input_a,
-    float immediate,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 
 /*
 Returns a new tensor with the signed angles in radians between vectors
@@ -394,9 +365,6 @@ Tensor full(
     Device* device = nullptr,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// rpow: y = k**(a)
-Tensor rpow(const Tensor& a, float k, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // clip
 Tensor clip(
     const Tensor& a,
@@ -425,18 +393,9 @@ Tensor eps(
     Device* device,
     const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
-// logit(input, eps)=log(input / 1 - input)
-Tensor logit(
-    const Tensor& input_a, float eps, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
 // polygamma
 Tensor polygamma(
     const Tensor& input_a, uint32_t k, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-Tensor logical_xori(
-    const Tensor& input_a,
-    float immediate,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 /** hyperbolic operations **/
 // sinh(x) = (exp(x) - exp(-x))/2
@@ -479,13 +438,6 @@ Tensor std_hw(const Tensor& y, const MemoryConfig& output_mem_config = operation
 // Function normalize
 // use transformation y = (y - mean(y))/std(y) by broadcast
 Tensor normalize_hw(const Tensor& y, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-Tensor normalize_global(
-    const Tensor& y, const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
-
-Tensor logical_ori(
-    const Tensor& input_a,
-    float immediate,
-    const MemoryConfig& output_mem_config = operation::DEFAULT_OUTPUT_MEMORY_CONFIG);
 
 // on-device tensor creation with shape and filled with value
 Tensor sfpu_eps(const Shape shape, Layout layout, Device* device, const MemoryConfig& output_mem_config);

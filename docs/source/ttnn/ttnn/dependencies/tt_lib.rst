@@ -290,10 +290,6 @@ Tensor elementwise operations
 
 .. autofunction:: tt_lib.tensor.softsign
 
-.. autofunction:: tt_lib.tensor.softshrink
-
-.. autofunction:: tt_lib.tensor.hardshrink
-
 .. autofunction:: tt_lib.tensor.cosh
 
 .. autofunction:: tt_lib.tensor.sinh
@@ -308,31 +304,19 @@ Tensor elementwise operations
 
 .. autofunction:: tt_lib.tensor.atan2
 
-.. autofunction:: tt_lib.tensor.logical_xori
-
 .. autofunction:: tt_lib.tensor.subalpha
-
-.. autofunction:: tt_lib.tensor.celu
 
 .. autofunction:: tt_lib.tensor.addalpha
 
 .. autofunction:: tt_lib.tensor.bias_gelu_unary
 
-.. autofunction:: tt_lib.tensor.logit
-
-.. autofunction:: tt_lib.tensor.logical_andi
-
 .. autofunction:: tt_lib.tensor.assign
 
 .. autofunction:: tt_lib.tensor.digamma
 
-.. autofunction:: tt_lib.tensor.logical_ori
-
 .. autofunction:: tt_lib.tensor.polygamma
 
 .. autofunction:: tt_lib.tensor.trunc
-
-.. autofunction:: tt_lib.tensor.frac
 
 .. autofunction:: tt_lib.tensor.round
 
@@ -409,8 +393,6 @@ Broadcast and Reduce
 .. autofunction:: tt_lib.tensor.global_sum
 
 .. autofunction:: tt_lib.tensor.global_mean
-
-.. autofunction:: tt_lib.tensor.rpow
 
 
 Fallback Operations
@@ -580,13 +562,9 @@ Other Operations
 
 .. autofunction:: tt_lib.tensor.var_hw
 
-.. autofunction:: tt_lib.tensor.logical_noti
-
 .. autofunction:: tt_lib.tensor.std_hw
 
 .. autofunction:: tt_lib.tensor.normalize_hw
-
-.. autofunction:: tt_lib.tensor.normalize_global
 
 .. autofunction:: tt_lib.tensor.lamb_optimizer
 

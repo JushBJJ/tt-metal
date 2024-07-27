@@ -138,6 +138,18 @@ def embeddings_shape_func(input_shape):
     return input_shape_0, input_shape_1
 
 
+def logical_and_(x, y):
+    ttnn.logical_and_(x, y)
+
+
+def logical_or_(x, y):
+    ttnn.logical_or_(x, y)
+
+
+def logical_xor_(x, y):
+    ttnn.logical_xor_(x, y)
+
+
 def unary_add_bw(x, y):
     ttnn.add_bw(x, y, 3)
 
@@ -639,6 +651,18 @@ all_binary_ops = [
     {
         "op": lerp_binary,
         "name": "ttnn.lerp_binary",
+    },
+    {
+        "op": logical_and_,
+        "name": "ttnn.logical_and_",
+    },
+    {
+        "op": logical_or_,
+        "name": "ttnn.logical_or_",
+    },
+    {
+        "op": logical_xor_,
+        "name": "ttnn.logical_xor_",
     },
     {
         "op": ttnn.xlogy,
@@ -1170,11 +1194,11 @@ def leaky_relu(x):
 
 
 def softshrink(x):
-    ttnn.softshrink(x, 70)
+    ttnn.softshrink(x, lambd=70)
 
 
 def hardshrink(x):
-    ttnn.hardshrink(x, 1)
+    ttnn.hardshrink(x, lambd=1)
 
 
 def elu(x):
@@ -1185,24 +1209,12 @@ def heaviside(x):
     ttnn.heaviside(x, 0.5)
 
 
-def logical_xori(x):
-    tt_lib.tensor.logical_xori(x, 2)
-
-
 def bias_gelu_unary(x):
     tt_lib.tensor.bias_gelu_unary(x, 2)
 
 
 def logit(x):
-    ttnn.logit(x, 0.0001)
-
-
-def logical_andi(x):
-    tt_lib.tensor.logical_andi(x, 2)
-
-
-def logical_ori(x):
-    tt_lib.tensor.logical_ori(x, 2)
+    ttnn.logit(x, eps=0.0001)
 
 
 def polygamma(x):
@@ -1354,7 +1366,7 @@ def max_dim_23(x):
 
 
 def rpow(x):
-    tt_lib.tensor.rpow(x, 3)
+    ttnn.rpow(x, 3)
 
 
 def rsub(x):
@@ -1455,8 +1467,8 @@ def convert_conv_weight_tensor_to_tiled_layout(x):
     tt_lib.tensor.convert_conv_weight_tensor_to_tiled_layout(x, in1_block_h=32, in1_block_w=32)
 
 
-def logical_noti(x):
-    tt_lib.tensor.logical_noti(x, 2)
+def logical_not_(x):
+    ttnn.logical_not_(x)
 
 
 def glu_1(x):
@@ -1828,10 +1840,6 @@ all_unary_ops = [
         "name": "ttnn.atanh",
     },
     {
-        "op": logical_xori,
-        "name": "tt_lib.tensor.logical_xori",
-    },
-    {
         "op": ttnn.logical_not,
         "name": "ttnn.logical_not",
     },
@@ -1869,10 +1877,6 @@ all_unary_ops = [
         "num_repeats": 3,
     },
     {
-        "op": logical_andi,
-        "name": "tt_lib.tensor.logical_andi",
-    },
-    {
         "op": ttnn.erfinv,
         "name": "ttnn.erfinv",
     },
@@ -1895,10 +1899,6 @@ all_unary_ops = [
     {
         "op": ttnn.tan,
         "name": "ttnn.tan",
-    },
-    {
-        "op": logical_ori,
-        "name": "tt_lib.tensor.logical_ori",
     },
     {
         "op": polygamma,
@@ -2085,7 +2085,7 @@ all_unary_ops = [
     },
     {
         "op": rpow,
-        "name": "tt_lib.tensor.rpow",
+        "name": "ttnn.rpow",
     },
     {
         "op": rsub,
@@ -2185,8 +2185,8 @@ all_unary_ops = [
         "name": "tt_lib.tensor.var_hw",
     },
     {
-        "op": logical_noti,
-        "name": "tt_lib.tensor.logical_noti",
+        "op": logical_not_,
+        "name": "ttnn.logical_not_",
     },
     {
         "op": tt_lib.tensor.std_hw,
@@ -2197,8 +2197,8 @@ all_unary_ops = [
         "name": "tt_lib.tensor.normalize_hw",
     },
     {
-        "op": tt_lib.tensor.normalize_global,
-        "name": "tt_lib.tensor.normalize_global",
+        "op": normalize_global,
+        "name": "ttnn.normalize_global",
     },
     {
         "op": glu_1,

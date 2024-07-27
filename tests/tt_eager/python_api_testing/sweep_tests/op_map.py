@@ -176,9 +176,9 @@ op_map = {
         "tt_op": tt_lib_ops.eltwise_lgamma,
         "pytorch_op": pytorch_ops.lgamma,
     },
-    "eltwise-logical_noti": {
-        "tt_op": tt_lib_ops.eltwise_logical_noti,
-        "pytorch_op": pytorch_ops.logical_noti,
+    "eltwise-logical_not_": {
+        "tt_op": tt_lib_ops.eltwise_logical_not_,
+        "pytorch_op": pytorch_ops.logical_not_,
     },
     "eltwise-bitwise_complement": {
         "tt_op": None,  # tt_lib_ops.eltwise_bitwise_complement,
@@ -392,9 +392,9 @@ op_map = {
         "tt_op": tt_lib_ops.eltwise_logical_and,
         "pytorch_op": pytorch_ops.logical_and,
     },
-    "eltwise-logical_andi": {
-        "tt_op": tt_lib_ops.eltwise_logical_andi,
-        "pytorch_op": pytorch_ops.logical_andi,
+    "eltwise-logical_and_": {
+        "tt_op": tt_lib_ops.eltwise_logical_and_,
+        "pytorch_op": pytorch_ops.logical_and_,
     },
     "eltwise-atan2": {
         "tt_op": tt_lib_ops.eltwise_atan2,
@@ -564,9 +564,9 @@ op_map = {
         "tt_op": tt_lib_ops.eltwise_polygamma,
         "pytorch_op": pytorch_ops.polygamma,
     },
-    "eltwise-logical_xori": {
-        "tt_op": tt_lib_ops.eltwise_logical_xori,
-        "pytorch_op": pytorch_ops.logical_xori,
+    "eltwise-logical_xor_": {
+        "tt_op": tt_lib_ops.eltwise_logical_xor_,
+        "pytorch_op": pytorch_ops.logical_xor_,
     },
     "eltwise-hardsigmoid": {
         "tt_op": tt_lib_ops.eltwise_hardsigmoid,
@@ -777,9 +777,9 @@ op_map = {
         "tt_op": tt_lib_ops.eltwise_logical_or,
         "pytorch_op": pytorch_ops.logical_or,
     },
-    "eltwise-logical_ori": {
-        "tt_op": tt_lib_ops.eltwise_logical_ori,
-        "pytorch_op": pytorch_ops.logical_ori,
+    "eltwise-logical_or_": {
+        "tt_op": tt_lib_ops.eltwise_logical_or_,
+        "pytorch_op": pytorch_ops.logical_or_,
     },
     "eltwise-isclose": {
         "tt_op": tt_lib_ops.eltwise_isclose,

@@ -13,7 +13,6 @@
 #include "ttnn/cpp/ttnn/operations/copy.hpp"
 #include "ttnn/operations/eltwise/unary/unary_composite.hpp"
 
-
 namespace ttnn::operations::binary{
 
 enum class BinaryCompositeOpType {

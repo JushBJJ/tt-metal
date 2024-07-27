@@ -257,7 +257,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         )doc");
         // *** composite unary ops ***
         detail::bind_unary_op(m_tensor, "normalize_hw", tt::tt_metal::normalize_hw, R"doc(Returns a new tensor with the Gaussian normalize of the elements of the input tensor ``{0}`` on H,W axes.)doc");
-        detail::bind_unary_op(m_tensor, "normalize_global", tt::tt_metal::normalize_global, R"doc(Returns a new tensor with the Gaussian normalize of the elements of the input tensor ``{0}`` on N,C,H,W axes.)doc");
         detail::bind_unary_op(m_tensor, "var_hw", tt::tt_metal::var_hw, R"doc(  Returns a new tensor with the variance of the input tensor ``{0}`` on H,W axes.)doc");
         detail::bind_unary_op(m_tensor, "std_hw", tt::tt_metal::std_hw, R"doc(Returns a new tensor with the standard deviation of the input tensor ``{0}`` on H,W axes.)doc");
         detail::bind_unary_op(m_tensor, "sinh", &tt::tt_metal::sinh, R"doc(Returns tensor with the hyperbolic sine of elements of the input tensor ``{0}`` in range [-9,9] with high accuracy.)doc");
@@ -290,22 +289,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         R"doc(Computes the logarithmic derivative of the gamma function on input tensor ``{0}`` for the input range 1 to inf.)doc");
     detail::bind_unary_op_with_param(
         m_tensor,
-        "softshrink",
-        &softshrink,
-        py::arg("lambda"),
-        R"doc(Applies the softshrink function to the elements of the input tensor ``{0}`` between limits ``-{1}`` low and
-            the ``+{1}`` high limits.)doc",
-        R"doc("value limits (-lambda to +lambda)", "float", ">= 0")doc");
-    detail::bind_unary_op_with_param(
-        m_tensor,
-        "hardshrink",
-        &hardshrink,
-        py::arg("lambda"),
-        R"doc(Applies the hardshrink function to the elements of the input tensor ``{0}`` between limits ``-{1}`` low and
-            the ``+{1}`` high limits.)doc",
-        R"doc("value limits (-lambda to +lambda)", "float", ">= 0")doc");
-    detail::bind_unary_op_with_param(
-        m_tensor,
         "bias_gelu_unary",
         &bias_gelu_unary,
         py::arg("bias"),
@@ -318,39 +301,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         py::arg("coeffs"),
         R"doc(Returns tensor with the polyval of all of elements of the input tensor ``{0}`` with coefficients ``{1}``.)doc",
         R"doc("coefficients value with highest degree first", "List of float", "List size > 0")doc");
-
-
-    detail::bind_unary_op_with_param(
-        m_tensor,
-        "logical_andi",
-        &logical_andi,
-        py::arg("immediate"),
-        R"doc(Perform an eltwise logical AND (``{0} && {1}``) on input tensor and immediate value.)doc",
-        R"doc("Scalar", "float", "")doc");
-
-    detail::bind_unary_op_with_param(
-        m_tensor,
-        "logical_noti",
-        &logical_noti,
-        py::arg("immediate"),
-        R"doc(Perform an eltwise logical NOT (``!{1}``) on immediate value.)doc",
-        R"doc("immediate", "float", "")doc");
-
-    detail::bind_unary_op_with_param(
-        m_tensor,
-        "rpow",
-        rpow,
-        py::arg("base"),
-        R"doc(Returns tensor  raising ``{1}`` value to power of respective elements of the input exponent tensor ``{0}``.)doc",
-        R"doc("base value", "float", ">0.0")doc");
-
-    detail::bind_unary_op_with_param(
-        m_tensor,
-        "logical_ori",
-        &logical_ori,
-        py::arg("immediate"),
-        R"doc(Perform an eltwise logical OR (``{0} || {1}``) on input tensor and immediate value.)doc",
-        R"doc("Scalar", "float", "")doc");
 
     m_tensor.def(
         "argmax",
@@ -492,27 +442,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
                 "input", "Tensor lerp is applied to", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
                 "end", "End value", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
                 "weight", "Weight value", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-        )doc");
-
-    m_tensor.def(
-        "celu",
-        &celu,
-        py::arg("input").noconvert(),
-        py::arg("alpha") = 1.0f,
-        py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,
-        R"doc(
-            Applies the celu function to the elements of the input tensor ``input``.
-
-            Input tensor must have BFLOAT16 data type.
-
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "input", "Tensor celu is applied to", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
-                "alpha", "alpha value (PyTorch default)", "float", "default to 1.0", "Yes"
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
 
@@ -1133,21 +1062,6 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
                 "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
         )doc");
 
-        m_tensor.def("frac",&frac,
-            py::arg("input").noconvert(),py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,R"doc(
-            Performs the element-wise frac operation on ``input``. Support provided only for Wormhole_B0.
-
-            Input tensor must have BFLOAT16 data type.
-
-            Output tensor will have BFLOAT16 data type.
-
-            .. csv-table::
-                :header: "Argument", "Description", "Data type", "Valid range", "Required"
-
-                "input", "Input Tensor", "Tensor", "Tensor of shape [W, Z, Y, X]", "Yes"
-                "output_mem_config", "Layout of tensor in TT Accelerator device memory banks", "MemoryConfig", "Default is interleaved in DRAM", "No"
-        )doc");
-
         m_tensor.def("round",&round,
             py::arg("input").noconvert(),py::arg("decimals"),py::arg("output_mem_config").noconvert() = operation::DEFAULT_OUTPUT_MEMORY_CONFIG,R"doc(
             Performs the element-wise round operation on ``input`` , to the given number of ``decimals`` places. Support provided only for Wormhole_B0 and ``decimals = 0``.
@@ -1313,24 +1227,10 @@ void TensorModuleCompositeOPs(py::module& m_tensor) {
         )doc");
 
         detail::bind_unary_op_with_param(
-            m_tensor, "logit", &logit,
-            py::arg("eps"),
-            R"doc(Returns a tensor that is a logit  of input tensor with shape ``[W, Z, Y, X]`` along clamp ``{1}``.)doc",
-            R"doc("dimension to logit along", "int", "0, 1, 2, or 3")doc"
-        );
-
-        detail::bind_unary_op_with_param(
             m_tensor, "polygamma", &polygamma,
             py::arg("n"),
             R"doc(Returns a tensor that is a polygamma of input tensor where the range supports from 1 to 10 with shape ``[W, Z, Y, X]`` along n ``{1}``.)doc",
             R"doc("the order of the polygamma along", "int", "1 to 10")doc"
-        );
-
-        detail::bind_unary_op_with_param(
-            m_tensor, "logical_xori", &logical_xori,
-            py::arg("immediate"),
-            R"doc(Perform an eltwise logical XOR (``{0} ^ {1}``) on input tensor and immediate value.)doc",
-            R"doc("Scalar", "float", "")doc"
         );
 
         detail::bind_unary_op(m_tensor, "atanh", atanh, R"doc(Returns a new tensor with the inverse hyperbolic tangent of the elements of the input tensor ``{0}``.)doc");
