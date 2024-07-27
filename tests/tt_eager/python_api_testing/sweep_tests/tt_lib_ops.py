@@ -1383,7 +1383,7 @@ def full_like(
     **kwargs,
 ):
     t0 = setup_tt_tensor(x, device, layout[0], input_mem_config[0], dtype[0])
-    t1 = ttnn.full_like(t0, scalar, output_mem_config=output_mem_config)
+    t1 = ttnn.full_like(t0, scalar, memory_config=output_mem_config)
 
     return tt2torch_tensor(t1)
 
@@ -1394,7 +1394,7 @@ def ones(x, *args, device, dtype, layout, input_mem_config, output_mem_config, *
         x.shape,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,
-        output_mem_config=output_mem_config,
+        memory_config=output_mem_config,
     )
 
     return tt2torch_tensor(t1)
@@ -1406,7 +1406,7 @@ def zeros(x, *args, device, dtype, layout, input_mem_config, output_mem_config, 
         x.shape,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,
-        output_mem_config=output_mem_config,
+        memory_config=output_mem_config,
     )
 
     return tt2torch_tensor(t1)
@@ -1434,7 +1434,7 @@ def empty(x, *args, device, dtype, layout, input_mem_config, output_mem_config, 
         x.shape,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,
-        output_mem_config=output_mem_config,
+        memory_config=output_mem_config,
     )
 
     return tt2torch_tensor(t1)
@@ -1457,7 +1457,7 @@ def full(
         scalar,
         layout=layout[0],
         device=device if input_mem_config[0] is not None else None,
-        output_mem_config=output_mem_config,
+        memory_config=output_mem_config,
     )
 
     return tt2torch_tensor(t1)
@@ -1542,7 +1542,7 @@ def arange(
         end,
         step,
         device=device if input_mem_config[0] is not None else None,
-        output_mem_config=output_mem_config,
+        memory_config=output_mem_config,
     )
 
     return tt2torch_tensor(t1)

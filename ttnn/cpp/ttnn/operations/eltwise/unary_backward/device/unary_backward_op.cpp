@@ -499,7 +499,7 @@ std::vector<Tensor> _fill_bw(const Tensor& grad, const Tensor& input, const std:
     std::vector<Tensor> grad_tensor;
     auto output_memory_config = output_mem_config.value_or(input.memory_config());
     Tensor val = grad;
-    val = global_sum(val, output_mem_config);
+    val = global_sum(val);
     Tensor result = ttnn::operations::creation::zeros_like(grad);
     result = ttnn::add(result, val, std::nullopt, output_mem_config);
     grad_tensor.emplace_back(result);
